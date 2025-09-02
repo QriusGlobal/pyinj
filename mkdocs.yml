@@ -1,0 +1,57 @@
+site_name: PyInj
+site_description: Type-safe dependency injection for Python 3.13+ (beta)
+site_url: https://qriusglobal.github.io/pyinj/
+repo_url: https://github.com/QriusGlobal/pyinj
+repo_name: QriusGlobal/pyinj
+copyright: Copyright © Qrius Global
+
+theme:
+  name: material
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - content.code.copy
+    - content.action.edit
+    - search.highlight
+    - search.suggest
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+
+nav:
+  - Overview: index.md
+  - Getting Started: getting-started.md
+  - Usage: usage.md
+  - Advanced: advanced.md
+  - Performance: performance.md
+  - API: api.md
+  - Contributing: contributing.md
+  - Release Process: releases.md
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - codehilite
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+  - pymdownx.superfences
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/QriusGlobal/pyinj
+
+plugins:
+  - search
+  - minify:
+      minify_html: true
+

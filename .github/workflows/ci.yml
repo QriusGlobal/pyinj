@@ -25,3 +25,22 @@ jobs:
       - name: Run tests
         run: |
           uv run pytest -q
+
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          python-version: '3.13'
+
+      - name: Install docs dependencies
+        run: |
+          uv pip install mkdocs-material mkdocs-minify-plugin
+
+      - name: Build docs
+        run: |
+          uv run mkdocs build --strict
