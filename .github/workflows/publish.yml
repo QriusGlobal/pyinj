@@ -1,0 +1,32 @@
+name: Publish to PyPI (uv)
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write  # for trusted publishing if enabled
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          python-version: '3.13'
+
+      - name: Build
+        run: |
+          rm -rf dist
+          uv build
+
+      - name: Publish
+        env:
+          PYPI_API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          uv publish --token "$PYPI_API_TOKEN"

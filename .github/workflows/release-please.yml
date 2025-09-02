@@ -1,0 +1,23 @@
+name: Release Please
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Release Please
+        uses: google-github-actions/release-please-action@v4
+        with:
+          release-type: python
+          package-name: pyinj
+          manifest-file: .release-please-manifest.json
+          config-file: release-please-config.json
+
