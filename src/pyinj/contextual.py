@@ -62,11 +62,10 @@ def set_context(context: ChainMap) -> ContextToken:
 
 
 class ContextualContainer:
-    """
-    Container with contextual scope support using contextvars.
+    """Base container adding request/session context via ``contextvars``.
 
-    Provides Scala-inspired implicit context propagation that
-    automatically flows through async calls.
+    Context flows implicitly across awaits; request/session lifetimes
+    are enforced by the :class:`ScopeManager`.
     """
 
     def __init__(self) -> None:
@@ -101,24 +100,21 @@ class ContextualContainer:
 
     @contextmanager
     def request_scope(self) -> Iterator[ContextualContainer]:
-        """
-        Create a new request scope (like FastAPI's request lifecycle).
+        """Create a request scope (similar to a web request lifecycle).
 
         Example:
             with container.request_scope():
-                # All dependencies resolved here are request-scoped
                 service = container.get(ServiceToken)
 
         Yields:
-            Self for chaining
+            Self for chaining.
         """
         with self._scope_manager.request_scope():
             yield self
 
     @asynccontextmanager
     async def async_request_scope(self) -> AsyncIterator[ContextualContainer]:
-        """
-        Async context manager for request scopes.
+        """Async context manager variant of :meth:`request_scope`.
 
         Example:
             async with container.async_request_scope():

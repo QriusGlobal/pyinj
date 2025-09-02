@@ -13,7 +13,14 @@ T = TypeVar("T")
 
 
 class Scope(Enum):
-    """Dependency scope enumeration."""
+    """Lifecycle scope for dependencies.
+
+    Values:
+        SINGLETON: One instance for the process/container.
+        REQUEST: One instance per request context.
+        SESSION: One instance per longer‑lived session context.
+        TRANSIENT: A new instance for every resolution.
+    """
 
     SINGLETON = auto()  # Process-wide singleton
     REQUEST = auto()  # Request/context scoped
@@ -23,8 +30,17 @@ class Scope(Enum):
 
 @dataclass(frozen=True, slots=True)
 class Token(Generic[T]):
-    """
-    Immutable, hashable token for dependency identification.
+    """Immutable, hashable identifier for a typed dependency.
+
+    Args:
+        name: Human‑readable name for the binding.
+        type_: The expected Python type of the dependency.
+        scope: Lifecycle scope. Defaults to TRANSIENT.
+        qualifier: Optional qualifier to differentiate multiple bindings of the same type.
+        tags: Optional tags for discovery/metadata.
+
+    Example:
+        LOGGER = Token[Logger]("logger", scope=Scope.SINGLETON)
     """
 
     name: str
@@ -69,11 +85,12 @@ class Token(Generic[T]):
 
     @property
     def metadata(self) -> MappingProxyType[str, Any]:
-        """Read-only view of metadata."""
+        """Read‑only view of metadata."""
         return self._metadata  # type: ignore[return-value]
 
     @property
     def qualified_name(self) -> str:
+        """Fully qualified name including module, type, qualifier, and token name."""
         parts: list[str] = []
         if hasattr(self.type_, "__module__"):
             parts.append(self.type_.__module__)  # type: ignore[arg-type]
@@ -84,6 +101,7 @@ class Token(Generic[T]):
         return ".".join(parts)
 
     def with_scope(self, scope: Scope) -> Token[T]:
+        """Return a copy of this token with a different scope."""
         return Token(
             name=self.name,
             type_=self.type_,
@@ -94,6 +112,7 @@ class Token(Generic[T]):
         )
 
     def with_qualifier(self, qualifier: str) -> Token[T]:
+        """Return a copy of this token with a qualifier."""
         return Token(
             name=self.name,
             type_=self.type_,
@@ -104,6 +123,7 @@ class Token(Generic[T]):
         )
 
     def with_tags(self, *tags: str) -> Token[T]:
+        """Return a copy of this token with tags merged in (set semantics)."""
         return Token(
             name=self.name,
             type_=self.type_,
@@ -125,7 +145,11 @@ class Token(Generic[T]):
         return "".join(parts) + ")"
 
     def validate(self, instance: Any) -> bool:
-        """Validate instance type against the token's expected type."""
+        """Validate instance type against the token's expected type.
+
+        Returns False only when ``isinstance(instance, type_)`` is definitively False.
+        If runtime type information is insufficient, returns True.
+        """
         try:
             return isinstance(instance, self.type_)
         except Exception:
@@ -133,7 +157,7 @@ class Token(Generic[T]):
 
 
 class TokenFactory:
-    """Factory for creating and caching tokens."""
+    """Factory for creating and caching commonly used tokens."""
 
     def __init__(self) -> None:
         self._cache: dict[tuple[str, type[Any], Scope, str | None], Token[Any]] = {}
@@ -146,6 +170,7 @@ class TokenFactory:
         qualifier: str | None = None,
         tags: tuple[str, ...] = (),
     ) -> Token[T]:
+        """Create a token, with a small internal cache for common shapes."""
         cache_key = (name, type_, scope, qualifier)
         if not tags and cache_key in self._cache:
             return cast(Token[T], self._cache[cache_key])
@@ -157,26 +182,33 @@ class TokenFactory:
         return token
 
     def singleton(self, name: str, type_: type[T]) -> Token[T]:
+        """Create a singleton‑scoped token."""
         return self.create(name, type_, scope=Scope.SINGLETON)
 
     def request(self, name: str, type_: type[T]) -> Token[T]:
+        """Create a request‑scoped token."""
         return self.create(name, type_, scope=Scope.REQUEST)
 
     def session(self, name: str, type_: type[T]) -> Token[T]:
+        """Create a session‑scoped token."""
         return self.create(name, type_, scope=Scope.SESSION)
 
     def transient(self, name: str, type_: type[T]) -> Token[T]:
+        """Create a transient‑scoped token (default)."""
         return self.create(name, type_, scope=Scope.TRANSIENT)
 
     def qualified(
         self, qualifier: str, type_: type[T], scope: Scope = Scope.TRANSIENT
     ) -> Token[T]:
+        """Create a qualified token for the given type and scope."""
         name = getattr(type_, "__name__", str(type_))
         return self.create(name, type_, scope=scope, qualifier=qualifier)
 
     def clear_cache(self) -> None:
+        """Clear the internal token cache (harmless)."""
         self._cache.clear()
 
     @property
     def cache_size(self) -> int:
+        """Number of cached token shapes currently held."""
         return len(self._cache)

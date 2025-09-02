@@ -44,19 +44,23 @@ def set_default_container(container: Container) -> None:
 
 
 class Container(ContextualContainer):
-    """
-    Enhanced DI container with all optimizations.
+    """Ergonomic, type‑safe DI container with async support.
 
     Features:
-    - O(1) lookups with dict-based registry
-    - Smart caching with functools.lru_cache
-    - Memory-efficient with weak references
-    - Thread-safe singleton creation
-    - Async-safe with asyncio locks
-    - Contextual scoping with contextvars
-    - Scala-inspired given instances
-    - Method chaining for setup
-    - Batch operations for efficiency
+    - O(1) lookups with a compact registry
+    - Thread/async‑safe singleton initialization
+    - Contextual scoping using ``contextvars`` (request/session)
+    - Scala‑inspired "given" instances for testability
+    - Method chaining for concise setup and batch operations
+
+    Example:
+        container = Container()
+        LOGGER = Token[Logger]("logger")
+        container.register_singleton(LOGGER, ConsoleLogger)
+
+        @container.inject
+        def handler(logger: Inject[Logger]):
+            logger.info("hello")
     """
 
     def __init__(self) -> None:
@@ -143,10 +147,20 @@ class Container(ContextualContainer):
         scope: Scope | None = None,
         tags: tuple[str, ...] = (),
     ) -> Container:
-        """
-        Register a provider for a token.
+        """Register a provider for a token.
 
-        Supports method chaining for fluent setup.
+        Args:
+            token: A ``Token[T]`` or a concrete ``type[T]``. If a type is
+                provided, a token is created automatically.
+            provider: Callable that returns the dependency instance.
+            scope: Optional lifecycle override (defaults to token.scope or TRANSIENT).
+            tags: Optional tags for discovery/metadata.
+
+        Returns:
+            Self, to allow method chaining.
+
+        Example:
+            container.register(Token[DB]("db"), create_db, scope=Scope.SINGLETON)
         """
         # Convert to Token if needed
         if isinstance(token, type):
@@ -170,19 +184,19 @@ class Container(ContextualContainer):
         return self  # Enable chaining
 
     def register_singleton(self, token: Token[Any] | type[Any], provider: Provider) -> Container:
-        """Register a singleton-scoped dependency."""
+        """Register a singleton‑scoped dependency."""
         return self.register(token, provider, scope=Scope.SINGLETON)
 
     def register_request(self, token: Token[Any] | type[Any], provider: Provider) -> Container:
-        """Register a request-scoped dependency."""
+        """Register a request‑scoped dependency."""
         return self.register(token, provider, scope=Scope.REQUEST)
 
     def register_transient(self, token: Token[Any] | type[Any], provider: Provider) -> Container:
-        """Register a transient-scoped dependency."""
+        """Register a transient‑scoped dependency."""
         return self.register(token, provider, scope=Scope.TRANSIENT)
 
     def register_value(self, token: Token[Any] | type[Any], value: Any) -> Container:
-        """Register a pre-created value as singleton."""
+        """Register a pre‑created value as a singleton."""
         if isinstance(token, type):
             token = self.tokens.singleton(token.__name__, token)
         # token is now a Token[Any]
@@ -192,7 +206,11 @@ class Container(ContextualContainer):
         return self
 
     def override(self, token: Token[Any], value: Any) -> None:
-        """Override a dependency with a specific value (testing convenience)."""
+        """Override a dependency with a specific value for this container.
+
+        Prefer the ``use_overrides`` context manager for scoped overrides
+        in concurrent test scenarios.
+        """
         self._singletons[token] = value
 
     # ============= Given Instances (Scala-inspired) =============
@@ -232,7 +250,17 @@ class Container(ContextualContainer):
     # ============= Resolution Methods =============
 
     def get(self, token: Token[Any] | type[Any]) -> Any:
-        """Resolve a dependency synchronously."""
+        """Resolve a dependency synchronously.
+
+        Args:
+            token: The ``Token[T]`` or ``type[T]`` to resolve.
+
+        Returns:
+            The resolved instance.
+
+        Raises:
+            ResolutionError: If no provider is registered or resolution fails.
+        """
         # Convert to token if needed and handle givens
         if isinstance(token, type):
             given = self.resolve_given(token)
@@ -277,7 +305,11 @@ class Container(ContextualContainer):
         
 
     async def aget(self, token: Token[Any] | type[Any]) -> Any:
-        """Resolve a dependency asynchronously."""
+        """Resolve a dependency asynchronously.
+
+        Equivalent to :meth:`get` but awaits async providers and uses
+        async locks for singleton initialization.
+        """
         # Convert to token if needed
         if isinstance(token, type):
             given = self.resolve_given(token)
@@ -343,7 +375,7 @@ class Container(ContextualContainer):
         return self
 
     def batch_resolve(self, tokens: list[Token[Any]]) -> dict[Token[Any], Any]:
-        """Resolve multiple dependencies efficiently."""
+        """Resolve multiple dependencies efficiently (sync)."""
         sorted_tokens = sorted(tokens, key=lambda t: t.scope.value)
         results: dict[Token[Any], Any] = {}
         for _scope, group in groupby(sorted_tokens, key=lambda t: t.scope):
@@ -387,9 +419,11 @@ class Container(ContextualContainer):
     # ============= Utilities =============
 
     def get_providers_view(self) -> MappingProxyType:
+        """Return a read‑only view of registered providers."""
         return MappingProxyType(self._providers)
 
     def has(self, token: Token[Any] | type[Any]) -> bool:
+        """Return True if the token/type is known to the container."""
         if isinstance(token, type):
             if token in self._given_providers:
                 return True
@@ -397,6 +431,7 @@ class Container(ContextualContainer):
         return token in self._providers or token in self._singletons
 
     def clear(self) -> None:
+        """Clear providers, caches, and statistics. Does not affect docs or code."""
         with self._lock:
             self._providers.clear()
             self._singletons.clear()
@@ -449,7 +484,13 @@ class Container(ContextualContainer):
 
     @contextmanager
     def use_overrides(self, mapping: dict[Token[Any], Any]) -> Any:
-        """Temporarily override tokens for this concurrent context."""
+        """Temporarily override tokens for this concurrent context.
+
+        Example:
+            with container.use_overrides({LOGGER: fake_logger}):
+                svc = container.get(SERVICE)
+                ...
+        """
         parent = self._overrides.get()
         merged: dict[Token[Any], Any] = dict(parent) if parent else {}
         merged.update(mapping)

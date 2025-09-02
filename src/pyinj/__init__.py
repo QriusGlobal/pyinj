@@ -1,11 +1,23 @@
-"""PyInj - Enhanced DI Container with Zero Dependencies.
+"""PyInj — Type‑safe dependency injection for modern Python.
 
-A production-ready dependency injection container featuring:
+Status: Beta — APIs may change between pre‑releases. Pin exact versions in production.
+
+Highlights:
 - Immutable tokens with pre-computed hashes (O(1) lookups)
-- ContextVar-based scoping for async safety
-- FastAPI-style @inject decorator
-- Scala-inspired given instances
-- Zero external dependencies
+- ContextVar-based scoping for async and thread safety
+- `@inject` decorator (FastAPI-inspired) and lightweight markers
+- Scala‑style "given" instances for ergonomic overrides
+- Zero runtime dependencies
+
+Quick start:
+    from pyinj import Container, Token, Scope
+
+    container = Container()
+    DB = Token[Database]("database")
+    container.register(DB, create_database, scope=Scope.SINGLETON)
+
+    db = container.get(DB)
+    # ... use db ...
 """
 
 from pyinj.container import Container, get_default_container, set_default_container

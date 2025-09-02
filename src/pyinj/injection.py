@@ -1,4 +1,8 @@
-"""FastAPI-style dependency injection decorators and markers."""
+"""Lightweight decorators and markers for function parameter injection.
+
+These tools are inspired by FastAPI but remain framework‑agnostic and
+work with synchronous and asynchronous callables.
+"""
 
 from __future__ import annotations
 
@@ -29,7 +33,7 @@ P = TypeVar("P")
 
 class Inject:
     """
-    Marker for injected dependencies (like FastAPI's Depends).
+    Marker for injected dependencies (similar to FastAPI's ``Depends``).
 
     Usage:
         def handler(db: Inject[Database]):
@@ -43,7 +47,7 @@ class Inject:
 
     def __init__(self, provider: Callable | None = None) -> None:
         """
-        Initialize injection marker.
+        Initialize an injection marker optionally carrying a provider.
 
         Args:
             provider: Optional provider function
@@ -95,13 +99,13 @@ class Given:
 
 def Depends[T](provider: Callable[..., T]) -> T:
     """
-    FastAPI-compatible Depends marker.
+    FastAPI‑compatible ``Depends`` marker.
 
     Args:
         provider: Provider function for the dependency
 
     Returns:
-        Injection marker
+        An :class:`Inject` marker usable as a default parameter value.
     """
     return Inject(provider)  # type: ignore
 
