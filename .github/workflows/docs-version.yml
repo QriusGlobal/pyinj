@@ -1,12 +1,11 @@
-name: Docs
+name: Docs Versioned Release
 
 on:
-  push:
-    branches: [ main ]
-  workflow_dispatch:
+  release:
+    types: [published]
 
 jobs:
-  deploy:
+  versioned-docs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -30,6 +29,11 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      - name: Deploy dev docs to 'next'
+      - name: Deploy versioned docs and update 'latest'
+        env:
+          TAG: ${{ github.event.release.tag_name }}
         run: |
-          uv run mike deploy --push --branch gh-pages next
+          VERSION="${TAG#v}"
+          echo "Deploying docs for version $VERSION"
+          uv run mike deploy --push --branch gh-pages --update-aliases "$VERSION" latest
+
