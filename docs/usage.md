@@ -47,3 +47,16 @@ conn = await container.aget(DB)
 await container.dispose()
 ```
 
+## Plain Type Injection (ergonomic default)
+
+You can annotate parameters with concrete types and let `@inject` resolve them.
+Primitives and builtins like `str`/`int` are ignored; user-defined classes and
+protocols are eligible.
+
+```python
+from pyinj import inject
+
+@inject
+def service(logger: Logger, db: Database) -> None:
+    logger.info("start"); db.connect()
+```

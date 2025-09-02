@@ -162,13 +162,26 @@ container.clear_overrides()
 
 ```python
 # Resolve by protocol instead of token
-@container.inject
+from pyinj import inject
+
+@inject
 def business_logic(logger: Logger, db: Database) -> str:
     logger.info("Processing business logic")
     return db.query("SELECT * FROM users")
 
 # Dependencies automatically injected based on type hints
 result = business_logic()
+
+### Plain Type Injection
+
+Annotate parameters with concrete types and use `@inject` to resolve them.
+Builtins like `str`/`int` are ignored to avoid surprises.
+
+```python
+@inject
+def process(logger: Logger, db: Database) -> None:
+    logger.info("processing"); db.connect()
+```
 ```
 
 ### Multiple Scopes

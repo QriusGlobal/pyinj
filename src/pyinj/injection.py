@@ -160,6 +160,10 @@ def analyze_dependencies(func: Callable[..., Any]) -> dict[str, type | Token | I
                     deps[name] = metadata
                     break
 
+        elif _is_plain_injectable_type(annotation):
+            # Fallback: plain type annotation (non-builtin class/protocol)
+            deps[name] = annotation
+
     return deps
 
 
@@ -190,6 +194,21 @@ def _is_inject_type(annotation: Any) -> bool:
 
     # Check if it's a direct Inject class
     return isinstance(annotation, type) and issubclass(annotation, Inject)
+
+
+def _is_plain_injectable_type(annotation: Any) -> bool:
+    """Heuristically decide whether a plain type hint should be injected.
+
+    We inject only for non-builtin classes/protocols to avoid surprising
+    behavior with primitives like ``int`` or ``str``.
+    """
+    try:
+        return (
+            isinstance(annotation, type)
+            and getattr(annotation, "__module__", "builtins") != "builtins"
+        )
+    except Exception:
+        return False
 
 
 def _extract_inject_spec(

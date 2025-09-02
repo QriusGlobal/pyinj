@@ -58,7 +58,7 @@ class Container(ContextualContainer):
         LOGGER = Token[Logger]("logger")
         container.register_singleton(LOGGER, ConsoleLogger)
 
-        @container.inject
+        @inject
         def handler(logger: Inject[Logger]):
             logger.info("hello")
     """
