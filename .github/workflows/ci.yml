@@ -18,9 +18,9 @@ jobs:
         with:
           python-version: '3.13'
 
-      - name: Install dev dependencies
+      - name: Install project (dev)
         run: |
-          uv pip install -e .[dev]
+          uv sync --dev
 
       - name: Run tests
         run: |
