@@ -1,0 +1,30 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.9
+    hooks:
+      - id: ruff-format
+      - id: ruff
+        args: ["--exit-non-zero-on-fix"]
+
+  - repo: local
+    hooks:
+      - id: basedpyright
+        name: basedpyright
+        entry: basedpyright
+        language: python
+        types: [python]
+        additional_dependencies: [basedpyright]
+
+      - id: actionlint
+        name: actionlint (GitHub Actions)
+        entry: bash -lc scripts/lint-workflows.sh
+        language: system
+        files: ^.github/workflows/
+
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.35.1
+    hooks:
+      - id: yamllint
+        files: ^(.github/workflows/|.*\.ya?ml)$
+        args: ["-c", ".yamllint.yml"]
+

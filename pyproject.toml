@@ -45,6 +45,7 @@ dev = [
     "SQLAlchemy>=2.0",
     "aiosqlite>=0.19",
     "playwright>=1.44",
+    "pre-commit>=3.7",
 ]
 
 [tool.mypy]
