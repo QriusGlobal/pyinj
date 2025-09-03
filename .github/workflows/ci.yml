@@ -19,6 +19,7 @@ jobs:
           python-version: '3.13'
           enable-cache: true
           cache-dependency-glob: "**/pyproject.toml"
+          activate-environment: true
 
       - name: Install project (dev)
         run: |
@@ -40,6 +41,7 @@ jobs:
           python-version: '3.13'
           enable-cache: true
           cache-dependency-glob: "**/pyproject.toml"
+          activate-environment: true
 
       - name: Install docs dependencies
         run: |
