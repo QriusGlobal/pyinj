@@ -2,7 +2,7 @@ name: Docs
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   workflow_dispatch:
 
 jobs:
@@ -17,9 +17,11 @@ jobs:
           fetch-depth: 0
 
       - name: Setup uv
-        uses: astral-sh/setup-uv@v4
+        uses: astral-sh/setup-uv@v6
         with:
           python-version: '3.13'
+          enable-cache: true
+          cache-dependency-glob: "**/pyproject.toml"
 
       - name: Install docs tooling
         run: |

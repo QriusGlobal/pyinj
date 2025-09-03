@@ -20,4 +20,3 @@ jobs:
           package-name: pyinj
           manifest-file: .release-please-manifest.json
           config-file: release-please-config.json
-

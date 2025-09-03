@@ -3,7 +3,6 @@ name: Docs Versioned Release
 on:
   release:
     types: [published]
-
 jobs:
   versioned-docs:
     runs-on: ubuntu-latest
@@ -16,9 +15,11 @@ jobs:
           fetch-depth: 0
 
       - name: Setup uv
-        uses: astral-sh/setup-uv@v4
+        uses: astral-sh/setup-uv@v6
         with:
           python-version: '3.13'
+          enable-cache: true
+          cache-dependency-glob: "**/pyproject.toml"
 
       - name: Install docs tooling
         run: |
@@ -36,4 +37,3 @@ jobs:
           VERSION="${TAG#v}"
           echo "Deploying docs for version $VERSION"
           uv run mike deploy --push --branch gh-pages --update-aliases "$VERSION" latest
-
