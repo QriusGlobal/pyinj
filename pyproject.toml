@@ -66,6 +66,7 @@ reportAny = "warning"
 reportUnusedImport = "error"
 reportUnusedClass = "error" 
 reportUnusedFunction = "error"
+reportUnnecessaryIsInstance = "warning"
 
 [tool.ruff]
 target-version = "py313"

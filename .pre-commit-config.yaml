@@ -18,6 +18,7 @@ repos:
         language: python
         types: [python]
         additional_dependencies: [basedpyright]
+        args: ["src/", "tests/"]
 
       - id: actionlint
         name: actionlint (GitHub Actions)
