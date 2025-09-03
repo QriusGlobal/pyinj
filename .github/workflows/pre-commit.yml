@@ -1,0 +1,32 @@
+name: Pre-commit
+
+'on':
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  run-pre-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          python-version: '3.13'
+          enable-cache: true
+          cache-dependency-glob: "**/pyproject.toml"
+          activate-environment: true
+
+      - name: Install pre-commit
+        run: |
+          uv pip install pre-commit
+
+      - name: Run pre-commit (skip workflow lint)
+        env:
+          SKIP: actionlint,yamllint
+        run: |
+          pre-commit run --all-files --show-diff-on-failure
