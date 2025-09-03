@@ -8,23 +8,24 @@ browser downloads while exercising DI patterns and cleanup behavior.
 from __future__ import annotations
 
 import asyncio
-from typing import Any
+from typing import Annotated, Any
 
-import pytest
-import httpx
 import aiosqlite
+import httpx
+import pytest
 
 from pyinj.container import Container
-from pyinj.tokens import Scope, Token
 from pyinj.injection import Inject, inject
-from typing import Annotated
+from pyinj.tokens import Scope, Token
 
 
 def _make_mock_httpx() -> httpx.AsyncClient:
     async def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, json={"path": request.url.path})
 
-    return httpx.AsyncClient(transport=httpx.MockTransport(handler), base_url="https://svc")
+    return httpx.AsyncClient(
+        transport=httpx.MockTransport(handler), base_url="https://svc"
+    )
 
 
 @pytest.mark.asyncio
@@ -60,10 +61,15 @@ async def test_user_style_project_di_with_httpx_and_aiosqlite() -> None:
         r = await client.get(f"/users/{user_id}")
         cur = await db.execute("select x from t")
         rows = await cur.fetchall()
-        return {"status": r.status_code, "path": r.json()["path"], "rows": [{"answer": row[0]} for row in rows]}
+        return {
+            "status": r.status_code,
+            "path": r.json()["path"],
+            "rows": [{"answer": row[0]} for row in rows],
+        }
 
     # Simulate concurrent requests with isolated scopes
     from typing import Awaitable, Callable, cast
+
     async def call(uid: int) -> dict[str, Any]:
         async with container.async_request_scope():
             wrapped = cast(Callable[[int], Awaitable[dict[str, Any]]], endpoint)

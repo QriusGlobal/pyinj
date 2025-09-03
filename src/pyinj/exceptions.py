@@ -5,6 +5,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from typing import Any
+
     from pyinj.tokens import Token
 
 __all__ = ["CircularDependencyError", "PyInjError", "ResolutionError"]
@@ -17,7 +19,9 @@ class PyInjError(Exception):
 class ResolutionError(PyInjError):
     """Raised when a dependency cannot be resolved."""
 
-    def __init__(self, token: Token, chain: list[Token], cause: str) -> None:
+    def __init__(
+        self, token: "Token[Any]", chain: list["Token[Any]"], cause: str
+    ) -> None:
         """Initialize resolution error with context.
 
         Args:
@@ -40,7 +44,7 @@ class ResolutionError(PyInjError):
 class CircularDependencyError(ResolutionError):
     """Raised when a circular dependency is detected during resolution."""
 
-    def __init__(self, token: Token, chain: list[Token]) -> None:
+    def __init__(self, token: "Token[Any]", chain: list["Token[Any]"]) -> None:
         """Initialize circular dependency error.
 
         Args:

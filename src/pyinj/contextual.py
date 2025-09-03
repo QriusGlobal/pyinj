@@ -41,7 +41,7 @@ def get_current_context() -> ChainMap[Token[object], object] | None:
 
 
 def set_context(
-    context: ChainMap[Token[object], object]
+    context: ChainMap[Token[object], object],
 ) -> ContextToken[ChainMap[Token[object], object] | None]:
     """
     Set the current dependency context.
@@ -68,7 +68,9 @@ class ContextualContainer:
         self._singletons: dict[Token[object], object] = {}
 
         # Weak cache for transients (auto-cleanup)
-        self._transients: WeakValueDictionary[Token[object], object] = WeakValueDictionary()
+        self._transients: WeakValueDictionary[Token[object], object] = (
+            WeakValueDictionary()
+        )
 
         # Providers registry (value type depends on concrete container)
         self._providers: dict[Token[object], Any] = {}
@@ -78,6 +80,7 @@ class ContextualContainer:
 
         # Track resources for cleanup
         from .protocols import SupportsAsyncClose, SupportsClose
+
         self._resources: list[SupportsClose | SupportsAsyncClose] = []
 
         # Scope manager (RAII contexts, precedence enforcement)
@@ -284,7 +287,9 @@ class ScopeManager:
 
     def store_in_context(self, token: Token[T], instance: T) -> None:
         if token.scope == Scope.SINGLETON:
-            self._container._singletons[cast(Token[object], token)] = cast(object, instance)
+            self._container._singletons[cast(Token[object], token)] = cast(
+                object, instance
+            )
         elif token.scope == Scope.REQUEST:
             self._container._put_in_current_request_cache(token, instance)
         elif token.scope == Scope.SESSION:
@@ -293,7 +298,9 @@ class ScopeManager:
                 session[cast(Token[object], token)] = cast(object, instance)
         elif token.scope == Scope.TRANSIENT:
             try:
-                self._container._transients[cast(Token[object], token)] = cast(object, instance)
+                self._container._transients[cast(Token[object], token)] = cast(
+                    object, instance
+                )
             except TypeError:
                 pass
 

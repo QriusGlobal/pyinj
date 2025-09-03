@@ -3,12 +3,17 @@
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
-from typing import Any
+from typing import TypeVar
 
-__all__ = ["AsyncProvider", "Provider", "ProviderFactory", "SyncProvider"]
+__all__ = [
+    "ProviderSync",
+    "ProviderAsync",
+    "ProviderLike",
+]
 
-# Type aliases for clarity (PEP 695 type statements)
-type SyncProvider = Callable[[], Any]
-type AsyncProvider = Callable[[], Awaitable[Any]]
-type Provider = SyncProvider | AsyncProvider
-type ProviderFactory = Callable[..., Any]
+T = TypeVar("T")
+
+# Generic provider types
+type ProviderSync[T] = Callable[[], T]
+type ProviderAsync[T] = Callable[[], Awaitable[T]]
+type ProviderLike[T] = ProviderSync[T] | ProviderAsync[T]

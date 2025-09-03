@@ -10,9 +10,8 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
-import pytest
-
 import httpx
+import pytest
 
 from pyinj.container import Container
 from pyinj.tokens import Scope, Token
@@ -35,7 +34,9 @@ class FakeAsyncPGPool:
 
 def make_httpx_client() -> httpx.AsyncClient:
     async def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(200, json={"method": request.method, "url": str(request.url)})
+        return httpx.Response(
+            200, json={"method": request.method, "url": str(request.url)}
+        )
 
     transport = httpx.MockTransport(handler)
     return httpx.AsyncClient(transport=transport, base_url="https://example.test")
@@ -62,7 +63,7 @@ async def test_async_singleton_httpx_concurrency() -> None:
 
     results = await asyncio.gather(*(worker(i) for i in range(50)))
     assert all(r.status_code == 200 for r in results)
-    first = results[0].json()
+    _first = results[0].json()
     assert all(r.json()["method"] == "GET" for r in results)
     assert created == 1  # only one AsyncClient created
 

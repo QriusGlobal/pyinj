@@ -12,13 +12,13 @@ from contextvars import Token as CtxToken
 from functools import lru_cache
 from itertools import groupby
 from types import MappingProxyType, TracebackType
-from typing import Any, TypeVar, cast, Mapping
+from typing import Any, Mapping, TypeVar, cast
 
 from .contextual import ContextualContainer
 from .exceptions import CircularDependencyError, ResolutionError
 from .protocols import SupportsAsyncClose, SupportsClose
 from .tokens import Scope, Token, TokenFactory
-from .types import ProviderLike, ProviderAsync, ProviderSync
+from .types import ProviderAsync, ProviderLike, ProviderSync
 
 __all__ = ["Container", "get_default_container", "set_default_container"]
 
@@ -187,7 +187,9 @@ class Container(ContextualContainer):
             )
 
         with self._lock:
-            self._providers[cast(Token[object], token)] = cast(ProviderLike[object], provider)
+            self._providers[cast(Token[object], token)] = cast(
+                ProviderLike[object], provider
+            )
 
         return self  # Enable chaining
 
@@ -290,7 +292,9 @@ class Container(ContextualContainer):
         obj_token = self._obj_token(token)
         provider = self._providers.get(obj_token)
         if provider is None:
-            raise ResolutionError(token, [], f"No provider registered for token '{token.name}'")
+            raise ResolutionError(
+                token, [], f"No provider registered for token '{token.name}'"
+            )
         return cast(ProviderLike[U], provider)
 
     def _get_scope(self, token: Token[U]) -> Scope:
@@ -486,7 +490,9 @@ class Container(ContextualContainer):
 
     # ============= Utilities =============
 
-    def get_providers_view(self) -> MappingProxyType[Token[object], ProviderLike[object]]:
+    def get_providers_view(
+        self,
+    ) -> MappingProxyType[Token[object], ProviderLike[object]]:
         """Return a read-only view of registered providers."""
         return MappingProxyType(self._providers)
 
@@ -579,7 +585,9 @@ class Container(ContextualContainer):
         parent = self._overrides.get()
         merged: dict[Token[object], object] = dict(parent) if parent else {}
         merged.update(cast(dict[Token[object], object], mapping))
-        token: CtxToken[dict[Token[object], object] | None] = self._overrides.set(merged)
+        token: CtxToken[dict[Token[object], object] | None] = self._overrides.set(
+            merged
+        )
         try:
             yield
         finally:

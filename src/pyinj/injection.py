@@ -8,12 +8,28 @@ from __future__ import annotations
 
 import asyncio
 import builtins
-from typing import Callable, ParamSpec, TypeVar, overload, cast as tcast, Generic, TypeAlias, ClassVar
-from functools import lru_cache, wraps
-from inspect import Parameter, iscoroutinefunction, signature
 from dataclasses import dataclass
 from enum import Enum, auto
-from typing import Any, Annotated, cast, get_args, get_origin, get_type_hints
+from functools import lru_cache, wraps
+from inspect import Parameter, iscoroutinefunction, signature
+from typing import (
+    Annotated,
+    Any,
+    Callable,
+    ClassVar,
+    Generic,
+    ParamSpec,
+    TypeAlias,
+    TypeVar,
+    cast,
+    get_args,
+    get_origin,
+    get_type_hints,
+    overload,
+)
+from typing import (
+    cast as tcast,
+)
 
 from .protocols import Resolvable
 from .tokens import Token
@@ -347,7 +363,9 @@ async def _aresolve_one(spec: _DepSpec, container: Resolvable[object]) -> object
             return await container.aget(cast(Token[object], spec.token))
         # Fallback
         loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(None, container.get, cast(Token[object], spec.token))
+        return await loop.run_in_executor(
+            None, container.get, cast(Token[object], spec.token)
+        )
     if spec.kind is _DepKind.INJECT:
         if spec.provider is not None:
             if iscoroutinefunction(spec.provider):
@@ -360,7 +378,9 @@ async def _aresolve_one(spec: _DepSpec, container: Resolvable[object]) -> object
         if hasattr(container, "aget"):
             return await container.aget(cast(type[Any], spec.type_))
         loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(None, container.get, cast(type[Any], spec.type_))
+        return await loop.run_in_executor(
+            None, container.get, cast(type[Any], spec.type_)
+        )
     # TYPE
     if hasattr(container, "aget"):
         return await container.aget(cast(type[Any], spec.type_))
@@ -407,14 +427,14 @@ async def resolve_dependencies_async(
 @overload
 def inject(
     func: Callable[P, R], *, container: Resolvable[Any] | None = ..., cache: bool = ...
-) -> Callable[P, R]:
-    ...
+) -> Callable[P, R]: ...
+
 
 @overload
 def inject(
     func: None = ..., *, container: Resolvable[Any] | None = ..., cache: bool = ...
-) -> Callable[[Callable[P, R]], Callable[P, R]]:
-    ...
+) -> Callable[[Callable[P, R]], Callable[P, R]]: ...
+
 
 def inject(
     func: Callable[P, R] | None = None,

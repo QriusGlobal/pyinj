@@ -26,11 +26,13 @@ class TestContainer:
     def test_container_initialization(self) -> None:
         container = Container()
         assert hasattr(container, "tokens")
-        assert container._providers == {}
-        assert container._singletons == {}
-        assert container._given_providers == {}
-        assert container._cache_hits == 0
-        assert container._cache_misses == 0
+        assert len(container.get_providers_view()) == 0
+        assert len(container.resources_view()) == 0
+        assert container.resolve_given(int) is None
+        stats = container.get_stats()
+        assert stats["singletons"] == 0
+        assert stats["cache_hits"] == 0
+        assert stats["cache_misses"] == 0
 
     def test_register_provider(self) -> None:
         container = Container()
@@ -40,7 +42,7 @@ class TestContainer:
 
         result = container.register(Token("database", Database), create_db)
         assert result is container
-        assert len(container._providers) == 1
+        assert len(container.get_providers_view()) == 1
 
     def test_register_with_type(self) -> None:
         container = Container()
@@ -49,8 +51,8 @@ class TestContainer:
             return Database()
 
         container.register(Database, create_db)
-        assert len(container._providers) == 1
-        token = list(container._providers.keys())[0]
+        assert len(container.get_providers_view()) == 1
+        token = list(container.get_providers_view().keys())[0]
         assert token.type_ == Database
 
     def test_register_with_string(self) -> None:
@@ -74,14 +76,14 @@ class TestContainer:
             .register(Token("cache", Cache), lambda: Cache())
             .register(Token("service", Service), lambda: Service(Database(), Cache()))
         )
-        assert len(container._providers) == 3
+        assert len(container.get_providers_view()) == 3
 
     def test_register_scoped_methods(self) -> None:
         container = Container()
         container.register_singleton(Database, lambda: Database())
         container.register_request(Cache, lambda: Cache())
         container.register_transient(Service, lambda: Service(Database(), Cache()))
-        tokens = list(container._providers.keys())
+        tokens = list(container.get_providers_view().keys())
         assert any(t.scope == Scope.SINGLETON for t in tokens)
         assert any(t.scope == Scope.REQUEST for t in tokens)
         assert any(t.scope == Scope.TRANSIENT for t in tokens)
@@ -90,9 +92,9 @@ class TestContainer:
         container = Container()
         db_instance = Database()
         container.register_value(Database, db_instance)
-        assert len(container._singletons) == 1
-        stored = list(container._singletons.values())[0]
-        assert stored is db_instance
+        stats = container.get_stats()
+        assert stats["singletons"] == 1
+        assert container.get(Database) is db_instance
 
     def test_get_simple(self) -> None:
         container = Container()

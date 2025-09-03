@@ -3,15 +3,22 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from contextlib import asynccontextmanager
-from typing import Any, Final, TypeVar
+from typing import Any, Final
 
 import structlog
-
 from di.core import Container, Token
-from servicem8py.ports import Clock, HttpClient, Logger, RequestExecutor, SystemClock, TokenStore
+from servicem8py.ports import (
+    Clock,
+    HttpClient,
+    Logger,
+    RequestExecutor,
+    SystemClock,
+    TokenStore,
+)
 
-
-HTTP_CLIENT_FACTORY: Final[Token[Callable[[], HttpClient]]] = Token("http_client_factory")
+HTTP_CLIENT_FACTORY: Final[Token[Callable[[], HttpClient]]] = Token(
+    "http_client_factory"
+)
 CLOCK: Final[Token[Clock]] = Token("clock")
 LOGGER: Final[Token[Logger]] = Token("logger")
 TOKEN_STORE: Final[Token[TokenStore]] = Token("token_store")
@@ -19,7 +26,9 @@ TOKEN_STORE: Final[Token[TokenStore]] = Token("token_store")
 ResourceFactoryBuilder = Callable[[RequestExecutor, str], Any]
 MessagingBuilder = Callable[[RequestExecutor], Any]
 
-RESOURCE_FACTORY_BUILDER: Final[Token[ResourceFactoryBuilder]] = Token("resource_factory_builder")
+RESOURCE_FACTORY_BUILDER: Final[Token[ResourceFactoryBuilder]] = Token(
+    "resource_factory_builder"
+)
 MESSAGING_BUILDER: Final[Token[MessagingBuilder]] = Token("messaging_builder")
 
 
@@ -84,4 +93,5 @@ async def container_lifespan():
         yield container
     finally:
         await container.aclose()
-from di.core import depends, inject, scoped
+
+

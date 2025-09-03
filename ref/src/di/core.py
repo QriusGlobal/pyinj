@@ -207,7 +207,9 @@ class ScopedContainer:
     def clear_overrides(self) -> None:
         self._overrides.set({})
 
-    def _resolve(self, token: Token[T]) -> tuple[Provider[T] | None, AsyncProvider[T] | None]:
+    def _resolve(
+        self, token: Token[T]
+    ) -> tuple[Provider[T] | None, AsyncProvider[T] | None]:
         p = self._providers.get(token)  # type: ignore[assignment]
         ap = self._aproviders.get(token)  # type: ignore[assignment]
         if p is None and ap is None:
@@ -339,16 +341,20 @@ def inject(func: Callable[..., Any] | None = None):
             return bound
 
         if is_async:
+
             @wraps(f)
             async def _awrapper(*args, **kwargs):
                 bound = _prepare_bindings(*args, **kwargs)
                 return await f(*bound.args, **bound.kwargs)
+
             return _awrapper
         else:
+
             @wraps(f)
             def _wrapper(*args, **kwargs):
                 bound = _prepare_bindings(*args, **kwargs)
                 return f(*bound.args, **bound.kwargs)
+
             return _wrapper
 
     return _decorate(func) if func is not None else _decorate

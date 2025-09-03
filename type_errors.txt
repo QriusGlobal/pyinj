@@ -1,0 +1,182 @@
+47:  /Users/mishal/code/work/qrius-pyinj/src/pyinj/container.py:533:17 - error: Type of "append" is partially unknown
+52:  /Users/mishal/code/work/qrius-pyinj/src/pyinj/container.py:535:35 - error: Argument type is unknown
+127:  /Users/mishal/code/work/qrius-pyinj/src/pyinj/protocols.py:42:15 - error: Type of parameter "token" is partially unknown
+129:  /Users/mishal/code/work/qrius-pyinj/src/pyinj/protocols.py:42:22 - error: Variable not allowed in type expression (reportInvalidTypeForm)
+130:  /Users/mishal/code/work/qrius-pyinj/src/pyinj/protocols.py:47:15 - error: Type of parameter "token" is partially unknown
+132:  /Users/mishal/code/work/qrius-pyinj/src/pyinj/protocols.py:47:22 - error: Variable not allowed in type expression (reportInvalidTypeForm)
+134:  /Users/mishal/code/work/qrius-pyinj/src/pyinj/tokens.py:80:31 - error: Type of "type_" is partially unknown
+138:  /Users/mishal/code/work/qrius-pyinj/tests/conftest.py:54:9 - error: Return type, "Unknown | None", is partially unknown (reportUnknownParameterType)
+139:  /Users/mishal/code/work/qrius-pyinj/tests/conftest.py:55:16 - error: Type of "data" is partially unknown
+141:  /Users/mishal/code/work/qrius-pyinj/tests/conftest.py:55:16 - error: Type of "get" is partially unknown
+143:  /Users/mishal/code/work/qrius-pyinj/tests/conftest.py:55:16 - error: Return type, "Unknown | None", is partially unknown (reportUnknownVariableType)
+144:  /Users/mishal/code/work/qrius-pyinj/tests/conftest.py:57:29 - error: Type of parameter "value" is unknown (reportUnknownParameterType)
+145:  /Users/mishal/code/work/qrius-pyinj/tests/conftest.py:57:29 - error: Type annotation is missing for parameter "value" (reportMissingParameterType)
+146:  /Users/mishal/code/work/qrius-pyinj/tests/conftest.py:58:9 - error: Type of "data" is partially unknown
+148:  /Users/mishal/code/work/qrius-pyinj/tests/conftest.py:72:22 - error: Type of parameter "config" is unknown (reportUnknownParameterType)
+149:  /Users/mishal/code/work/qrius-pyinj/tests/conftest.py:72:22 - error: Type annotation is missing for parameter "config" (reportMissingParameterType)
+150:  /Users/mishal/code/work/qrius-pyinj/tests/conftest.py:74:5 - error: Type of "addinivalue_line" is unknown (reportUnknownMemberType)
+151:  /Users/mishal/code/work/qrius-pyinj/tests/conftest.py:77:5 - error: Type of "addinivalue_line" is unknown (reportUnknownMemberType)
+152:  /Users/mishal/code/work/qrius-pyinj/tests/conftest.py:80:5 - error: Type of "addinivalue_line" is unknown (reportUnknownMemberType)
+157:  /Users/mishal/code/work/qrius-pyinj/tests/integration/test_realistic_usage.py:67:9 - error: Type of "r" is unknown (reportUnknownVariableType)
+158:  /Users/mishal/code/work/qrius-pyinj/tests/integration/test_realistic_usage.py:67:19 - error: Type of "get" is unknown (reportUnknownMemberType)
+159:  /Users/mishal/code/work/qrius-pyinj/tests/integration/test_realistic_usage.py:67:26 - error: Cannot access attribute "get" for class "Inject"
+161:  /Users/mishal/code/work/qrius-pyinj/tests/integration/test_realistic_usage.py:68:9 - error: Type of "rows" is unknown (reportUnknownVariableType)
+162:  /Users/mishal/code/work/qrius-pyinj/tests/integration/test_realistic_usage.py:68:16 - error: Type of "all" is unknown (reportUnknownMemberType)
+163:  /Users/mishal/code/work/qrius-pyinj/tests/integration/test_realistic_usage.py:68:23 - error: Type of "execute" is unknown (reportUnknownMemberType)
+164:  /Users/mishal/code/work/qrius-pyinj/tests/integration/test_realistic_usage.py:68:26 - error: Cannot access attribute "execute" for class "Inject"
+166:  /Users/mishal/code/work/qrius-pyinj/tests/integration/test_realistic_usage.py:69:27 - error: Type of "status_code" is unknown (reportUnknownMemberType)
+167:  /Users/mishal/code/work/qrius-pyinj/tests/integration/test_realistic_usage.py:69:50 - error: Type of "json" is unknown (reportUnknownMemberType)
+168:  /Users/mishal/code/work/qrius-pyinj/tests/integration/test_realistic_usage.py:69:82 - error: Type of "_mapping" is unknown (reportUnknownMemberType)
+169:  /Users/mishal/code/work/qrius-pyinj/tests/integration/test_realistic_usage.py:69:82 - error: Argument type is unknown
+171:  /Users/mishal/code/work/qrius-pyinj/tests/integration/test_realistic_usage.py:69:100 - error: Type of "row" is unknown (reportUnknownVariableType)
+172:  /Users/mishal/code/work/qrius-pyinj/tests/integration/test_realistic_usage.py:74:20 - error: Return type is unknown (reportUnknownVariableType)
+173:  /Users/mishal/code/work/qrius-pyinj/tests/integration/test_realistic_usage.py:74:26 - error: Arguments missing for parameters "client", "db" (reportCallIssue)
+188:  /Users/mishal/code/work/qrius-pyinj/tests/test_async.py:97:9 - error: Type of "token" is partially unknown
+190:  /Users/mishal/code/work/qrius-pyinj/tests/test_async.py:101:19 - error: Return type, "dict[Unknown, Unknown]", is partially unknown (reportUnknownParameterType)
+191:  /Users/mishal/code/work/qrius-pyinj/tests/test_async.py:101:40 - error: Expected type arguments for generic class "dict" (reportMissingTypeArgument)
+192:  /Users/mishal/code/work/qrius-pyinj/tests/test_async.py:106:20 - error: Return type, "dict[Unknown, Unknown]", is partially unknown (reportUnknownVariableType)
+193:  /Users/mishal/code/work/qrius-pyinj/tests/test_async.py:108:28 - error: Argument type is partially unknown
+196:  /Users/mishal/code/work/qrius-pyinj/tests/test_async.py:108:35 - error: Argument type is partially unknown
+199:  /Users/mishal/code/work/qrius-pyinj/tests/test_async.py:111:33 - error: Argument type is partially unknown
+204:  /Users/mishal/code/work/qrius-pyinj/tests/test_async.py:130:9 - error: Type of "combined_token" is partially unknown
+206:  /Users/mishal/code/work/qrius-pyinj/tests/test_async.py:139:19 - error: Return type, "dict[Unknown, Unknown]", is partially unknown (reportUnknownParameterType)
+207:  /Users/mishal/code/work/qrius-pyinj/tests/test_async.py:139:42 - error: Expected type arguments for generic class "dict" (reportMissingTypeArgument)
+210:  /Users/mishal/code/work/qrius-pyinj/tests/test_async.py:142:20 - error: Return type, "dict[Unknown, Unknown]", is partially unknown (reportUnknownVariableType)
+211:  /Users/mishal/code/work/qrius-pyinj/tests/test_async.py:146:28 - error: Argument type is partially unknown
+214:  /Users/mishal/code/work/qrius-pyinj/tests/test_async.py:146:44 - error: Argument type is partially unknown
+218:  /Users/mishal/code/work/qrius-pyinj/tests/test_async.py:148:39 - error: Argument type is partially unknown
+224:  /Users/mishal/code/work/qrius-pyinj/tests/test_async.py:183:13 - error: Type of "append" is partially unknown
+226:  /Users/mishal/code/work/qrius-pyinj/tests/test_async.py:193:20 - error: Argument type is partially unknown
+229:  /Users/mishal/code/work/qrius-pyinj/tests/test_async.py:194:13 - error: Type of "resource" is unknown (reportUnknownVariableType)
+230:  /Users/mishal/code/work/qrius-pyinj/tests/test_async.py:195:24 - error: Type of "closed" is unknown (reportUnknownMemberType)
+231:  /Users/mishal/code/work/qrius-pyinj/tests/test_async.py:200:13 - error: Type of "resource" is unknown (reportUnknownVariableType)
+232:  /Users/mishal/code/work/qrius-pyinj/tests/test_async.py:201:20 - error: Type of "closed" is unknown (reportUnknownMemberType)
+245:  /Users/mishal/code/work/qrius-pyinj/tests/test_async_httpx_asyncpg.py:65:5 - error: Variable "first" is not accessed (reportUnusedVariable)
+254:  /Users/mishal/code/work/qrius-pyinj/tests/test_container.py:29:26 - error: "_providers" is protected and used outside of the class in which it is declared (reportPrivateUsage)
+255:  /Users/mishal/code/work/qrius-pyinj/tests/test_container.py:30:26 - error: "_singletons" is protected and used outside of the class in which it is declared (reportPrivateUsage)
+256:  /Users/mishal/code/work/qrius-pyinj/tests/test_container.py:31:26 - error: "_given_providers" is protected and used outside of the class in which it is declared (reportPrivateUsage)
+257:  /Users/mishal/code/work/qrius-pyinj/tests/test_container.py:32:26 - error: "_cache_hits" is protected and used outside of the class in which it is declared (reportPrivateUsage)
+258:  /Users/mishal/code/work/qrius-pyinj/tests/test_container.py:33:26 - error: "_cache_misses" is protected and used outside of the class in which it is declared (reportPrivateUsage)
+259:  /Users/mishal/code/work/qrius-pyinj/tests/test_container.py:43:30 - error: "_providers" is protected and used outside of the class in which it is declared (reportPrivateUsage)
+260:  /Users/mishal/code/work/qrius-pyinj/tests/test_container.py:52:30 - error: "_providers" is protected and used outside of the class in which it is declared (reportPrivateUsage)
+261:  /Users/mishal/code/work/qrius-pyinj/tests/test_container.py:53:32 - error: "_providers" is protected and used outside of the class in which it is declared (reportPrivateUsage)
+262:  /Users/mishal/code/work/qrius-pyinj/tests/test_container.py:77:30 - error: "_providers" is protected and used outside of the class in which it is declared (reportPrivateUsage)
+263:  /Users/mishal/code/work/qrius-pyinj/tests/test_container.py:84:33 - error: "_providers" is protected and used outside of the class in which it is declared (reportPrivateUsage)
+264:  /Users/mishal/code/work/qrius-pyinj/tests/test_container.py:93:30 - error: "_singletons" is protected and used outside of the class in which it is declared (reportPrivateUsage)
+266:  /Users/mishal/code/work/qrius-pyinj/tests/test_container.py:94:33 - error: "_singletons" is protected and used outside of the class in which it is declared (reportPrivateUsage)
+272:  /Users/mishal/code/work/qrius-pyinj/tests/test_contextual.py:11:5 - error: Type of "get_current_context" is partially unknown
+274:  /Users/mishal/code/work/qrius-pyinj/tests/test_contextual.py:38:26 - error: "_singletons" is protected and used outside of the class in which it is declared (reportPrivateUsage)
+275:  /Users/mishal/code/work/qrius-pyinj/tests/test_contextual.py:39:26 - error: "_providers" is protected and used outside of the class in which it is declared (reportPrivateUsage)
+276:  /Users/mishal/code/work/qrius-pyinj/tests/test_contextual.py:123:9 - error: Variable "db_id" is not accessed (reportUnusedVariable)
+281:  /Users/mishal/code/work/qrius-pyinj/tests/test_contextual.py:175:50 - error: Type of "coroutine" is unknown (reportUnknownMemberType)
+282:  /Users/mishal/code/work/qrius-pyinj/tests/test_contextual.py:175:58 - error: "coroutine" is not a known attribute of module "asyncio" (reportAttributeAccessIssue)
+285:  /Users/mishal/code/work/qrius-pyinj/tests/test_contextual.py:264:41 - error: Variable "scope" is not accessed (reportUnusedVariable)
+286:  /Users/mishal/code/work/qrius-pyinj/tests/test_contextual.py:284:9 - error: Variable "token" is not accessed (reportUnusedVariable)
+287:  /Users/mishal/code/work/qrius-pyinj/tests/test_contextual.py:284:29 - error: Argument of type "ChainMap[str, str]" cannot be assigned to parameter "context" of type "ChainMap[dict[Token[Any], Any], dict[Token[Any], Any]]" in function "set_context"
+291:  /Users/mishal/code/work/qrius-pyinj/tests/test_contextual.py:287:9 - error: Type of "context" is partially unknown
+293:  /Users/mishal/code/work/qrius-pyinj/tests/test_contextual.py:289:16 - error: Argument of type "Literal['key']" cannot be assigned to parameter "key" of type "ChainMap[dict[Token[Any], Any], dict[Token[Any], Any]]" in function "__getitem__"
+295:  /Users/mishal/code/work/qrius-pyinj/tests/test_contextual.py:293:13 - error: "__setitem__" method not defined on type "MappingProxyType[ChainMap[dict[Token[Any], Any], dict[Token[Any], Any]], Unknown]" (reportIndexIssue)
+297:  /Users/mishal/code/work/qrius-pyinj/tests/test_injection.py:4:20 - error: Import "Any" is not accessed (reportUnusedImport)
+298:  /Users/mishal/code/work/qrius-pyinj/tests/test_injection.py:16:33 - error: Import "Scope" is not accessed (reportUnusedImport)
+299:  /Users/mishal/code/work/qrius-pyinj/tests/test_injection.py:27:19 - error: Type of parameter "key" is unknown (reportUnknownParameterType)
+300:  /Users/mishal/code/work/qrius-pyinj/tests/test_injection.py:27:19 - error: Type annotation is missing for parameter "key" (reportMissingParameterType)
+301:  /Users/mishal/code/work/qrius-pyinj/tests/test_injection.py:80:16 - error: Type of "_inject_type" is unknown (reportUnknownMemberType)
+302:  /Users/mishal/code/work/qrius-pyinj/tests/test_injection.py:80:25 - error: Cannot access attribute "_inject_type" for class "type[Given]"
+304:  /Users/mishal/code/work/qrius-pyinj/tests/test_injection.py:80:41 - error: Type of "_inject_type" is unknown (reportUnknownMemberType)
+305:  /Users/mishal/code/work/qrius-pyinj/tests/test_injection.py:80:51 - error: Cannot access attribute "_inject_type" for class "type[Inject]"
+307:  /Users/mishal/code/work/qrius-pyinj/tests/test_injection.py:117:36 - error: Expression of type "Inject" cannot be assigned to parameter of type "Database"
+309:  /Users/mishal/code/work/qrius-pyinj/tests/test_injection.py:129:36 - error: Expression of type "Inject" cannot be assigned to parameter of type "Database"
+311:  /Users/mishal/code/work/qrius-pyinj/tests/test_injection.py:142:20 - error: Return type is unknown (reportUnknownVariableType)
+312:  /Users/mishal/code/work/qrius-pyinj/tests/test_injection.py:144:37 - error: Argument type is partially unknown
+315:  /Users/mishal/code/work/qrius-pyinj/tests/test_injection.py:150:44 - error: Type of parameter "args" is unknown (reportUnknownParameterType)
+316:  /Users/mishal/code/work/qrius-pyinj/tests/test_injection.py:150:44 - error: Type annotation is missing for parameter "args" (reportMissingParameterType)
+317:  /Users/mishal/code/work/qrius-pyinj/tests/test_injection.py:150:52 - error: Type of parameter "kwargs" is unknown (reportUnknownParameterType)
+318:  /Users/mishal/code/work/qrius-pyinj/tests/test_injection.py:150:52 - error: Type annotation is missing for parameter "kwargs" (reportMissingParameterType)
+319:  /Users/mishal/code/work/qrius-pyinj/tests/test_injection.py:153:37 - error: Argument type is partially unknown
+322:  /Users/mishal/code/work/qrius-pyinj/tests/test_injection.py:162:28 - error: Type of parameter "func" is unknown (reportUnknownParameterType)
+323:  /Users/mishal/code/work/qrius-pyinj/tests/test_injection.py:162:28 - error: Type annotation is missing for parameter "func" (reportMissingParameterType)
+324:  /Users/mishal/code/work/qrius-pyinj/tests/test_injection.py:166:38 - error: Argument type is unknown
+326:  /Users/mishal/code/work/qrius-pyinj/tests/test_injection.py:171:49 - error: Argument type is partially unknown
+330:  /Users/mishal/code/work/qrius-pyinj/tests/test_injection.py:193:41 - error: Argument of type "dict[str, Token[Database]]" cannot be assigned to parameter "deps" of type "dict[str, type | Token[Any] | Inject]" in function "resolve_dependencies"
+336:  /Users/mishal/code/work/qrius-pyinj/tests/test_injection.py:208:41 - error: Argument of type "dict[str, Inject]" cannot be assigned to parameter "deps" of type "dict[str, type | Token[Any] | Inject]" in function "resolve_dependencies"
+343:  /Users/mishal/code/work/qrius-pyinj/tests/test_injection.py:221:23 - error: "_type" is protected and used outside of the class in which it is declared (reportPrivateUsage)
+344:  /Users/mishal/code/work/qrius-pyinj/tests/test_injection.py:224:41 - error: Argument of type "dict[str, Inject]" cannot be assigned to parameter "deps" of type "dict[str, type | Token[Any] | Inject]" in function "resolve_dependencies"
+353:  /Users/mishal/code/work/qrius-pyinj/tests/test_injection.py:233:20 - error: Type of "type_" is partially unknown
+356:  /Users/mishal/code/work/qrius-pyinj/tests/test_injection.py:243:41 - error: Argument of type "dict[str, type[Database]]" cannot be assigned to parameter "deps" of type "dict[str, type | Token[Any] | Inject]" in function "resolve_dependencies"
+362:  /Users/mishal/code/work/qrius-pyinj/tests/test_injection.py:256:41 - error: Argument of type "dict[str, type[Database] | type[Cache]]" cannot be assigned to parameter "deps" of type "dict[str, type | Token[Any] | Inject]" in function "resolve_dependencies"
+368:  /Users/mishal/code/work/qrius-pyinj/tests/test_injection.py:271:29 - error: Type of parameter "token" is unknown (reportUnknownParameterType)
+369:  /Users/mishal/code/work/qrius-pyinj/tests/test_injection.py:271:29 - error: Type annotation is missing for parameter "token" (reportMissingParameterType)
+370:  /Users/mishal/code/work/qrius-pyinj/tests/test_injection.py:279:53 - error: Argument of type "dict[str, Token[Database]]" cannot be assigned to parameter "deps" of type "dict[str, type | Token[Any] | Inject]" in function "resolve_dependencies_async"
+375:  /Users/mishal/code/work/qrius-pyinj/tests/test_injection.py:294:53 - error: Argument of type "dict[str, Token[Database]]" cannot be assigned to parameter "deps" of type "dict[str, type | Token[Any] | Inject]" in function "resolve_dependencies_async"
+381:  /Users/mishal/code/work/qrius-pyinj/tests/test_injection.py:311:53 - error: Argument of type "dict[str, Inject]" cannot be assigned to parameter "deps" of type "dict[str, type | Token[Any] | Inject]" in function "resolve_dependencies_async"
+386:  /Users/mishal/code/work/qrius-pyinj/tests/test_injection.py:329:9 - error: Type of "result" is unknown (reportUnknownVariableType)
+387:  /Users/mishal/code/work/qrius-pyinj/tests/test_injection.py:329:18 - error: Argument missing for parameter "db" (reportCallIssue)
+391:  /Users/mishal/code/work/qrius-pyinj/tests/test_injection.py:356:9 - error: Type of "result1" is unknown (reportUnknownVariableType)
+392:  /Users/mishal/code/work/qrius-pyinj/tests/test_injection.py:356:19 - error: Argument missing for parameter "db" (reportCallIssue)
+393:  /Users/mishal/code/work/qrius-pyinj/tests/test_injection.py:360:30 - error: Argument of type "Database" cannot be assigned to parameter "db" of type "Inject"
+395:  /Users/mishal/code/work/qrius-pyinj/tests/test_injection.py:369:29 - error: Type of parameter "token" is unknown (reportUnknownParameterType)
+396:  /Users/mishal/code/work/qrius-pyinj/tests/test_injection.py:369:29 - error: Type annotation is missing for parameter "token" (reportMissingParameterType)
+397:  /Users/mishal/code/work/qrius-pyinj/tests/test_injection.py:378:9 - error: Type of "result" is unknown (reportUnknownVariableType)
+398:  /Users/mishal/code/work/qrius-pyinj/tests/test_injection.py:378:24 - error: Argument missing for parameter "db" (reportCallIssue)
+400:  /Users/mishal/code/work/qrius-pyinj/tests/test_injection.py:392:13 - error: Type of "result" is unknown (reportUnknownVariableType)
+401:  /Users/mishal/code/work/qrius-pyinj/tests/test_injection.py:392:22 - error: Argument missing for parameter "db" (reportCallIssue)
+403:  /Users/mishal/code/work/qrius-pyinj/tests/test_injection.py:416:9 - error: Type of "result" is unknown (reportUnknownVariableType)
+404:  /Users/mishal/code/work/qrius-pyinj/tests/test_injection.py:416:18 - error: Argument missing for parameter "db" (reportCallIssue)
+406:  /Users/mishal/code/work/qrius-pyinj/tests/test_integration.py:7:40 - error: Import "get_default_container" is not accessed (reportUnusedImport)
+407:  /Users/mishal/code/work/qrius-pyinj/tests/test_integration.py:8:33 - error: Import "Scope" is not accessed (reportUnusedImport)
+408:  /Users/mishal/code/work/qrius-pyinj/tests/test_integration.py:9:45 - error: Import "Given" is not accessed (reportUnusedImport)
+409:  /Users/mishal/code/work/qrius-pyinj/tests/test_integration.py:10:30 - error: Import "RequestScope" is not accessed (reportUnusedImport)
+410:  /Users/mishal/code/work/qrius-pyinj/tests/test_integration.py:47:19 - error: Type of "data" is partially unknown
+412:  /Users/mishal/code/work/qrius-pyinj/tests/test_integration.py:49:20 - error: Type of "data" is partially unknown
+414:  /Users/mishal/code/work/qrius-pyinj/tests/test_integration.py:49:20 - error: Return type is unknown (reportUnknownVariableType)
+415:  /Users/mishal/code/work/qrius-pyinj/tests/test_integration.py:54:9 - error: Type of "data" is partially unknown
+441:  /Users/mishal/code/work/qrius-pyinj/tests/test_integration.py:143:13 - error: Return type is unknown (reportUnknownParameterType)
+442:  /Users/mishal/code/work/qrius-pyinj/tests/test_integration.py:144:20 - error: Type of "execute" is unknown (reportUnknownMemberType)
+443:  /Users/mishal/code/work/qrius-pyinj/tests/test_integration.py:144:20 - error: Return type is unknown (reportUnknownVariableType)
+444:  /Users/mishal/code/work/qrius-pyinj/tests/test_integration.py:144:23 - error: Cannot access attribute "execute" for class "Inject"
+446:  /Users/mishal/code/work/qrius-pyinj/tests/test_integration.py:147:9 - error: Type of "result" is unknown (reportUnknownVariableType)
+447:  /Users/mishal/code/work/qrius-pyinj/tests/test_integration.py:147:18 - error: Argument missing for parameter "db" (reportCallIssue)
+448:  /Users/mishal/code/work/qrius-pyinj/tests/test_integration.py:158:52 - error: Argument of type "DatabaseConfig | None" cannot be assigned to parameter "config" of type "DatabaseConfig" in function "__init__"
+456:  /Users/mishal/code/work/qrius-pyinj/tests/test_integration.py:172:52 - error: Argument of type "DatabaseConfig | None" cannot be assigned to parameter "config" of type "DatabaseConfig" in function "__init__"
+482:  /Users/mishal/code/work/qrius-pyinj/tests/test_integration.py:258:19 - error: Return type is unknown (reportUnknownParameterType)
+483:  /Users/mishal/code/work/qrius-pyinj/tests/test_integration.py:264:13 - error: Type of "result" is unknown (reportUnknownVariableType)
+484:  /Users/mishal/code/work/qrius-pyinj/tests/test_integration.py:264:22 - error: Type of "execute" is unknown (reportUnknownMemberType)
+485:  /Users/mishal/code/work/qrius-pyinj/tests/test_integration.py:264:25 - error: Cannot access attribute "execute" for class "Inject"
+487:  /Users/mishal/code/work/qrius-pyinj/tests/test_integration.py:265:13 - error: Type of "set" is unknown (reportUnknownMemberType)
+488:  /Users/mishal/code/work/qrius-pyinj/tests/test_integration.py:265:19 - error: Cannot access attribute "set" for class "Inject"
+490:  /Users/mishal/code/work/qrius-pyinj/tests/test_integration.py:266:20 - error: Return type is unknown (reportUnknownVariableType)
+491:  /Users/mishal/code/work/qrius-pyinj/tests/test_integration.py:269:9 - error: Type of "result" is unknown (reportUnknownVariableType)
+492:  /Users/mishal/code/work/qrius-pyinj/tests/test_integration.py:269:24 - error: Arguments missing for parameters "db", "cache" (reportCallIssue)
+496:  /Users/mishal/code/work/qrius-pyinj/tests/test_metaclass.py:5:49 - error: Import "Token" is not accessed (reportUnusedImport)
+498:  /Users/mishal/code/work/qrius-pyinj/tests/test_metaclass.py:61:9 - error: Variable "logger_token" is not accessed (reportUnusedVariable)
+514:  /Users/mishal/code/work/qrius-pyinj/tests/test_metaclass.py:192:20 - error: "_registry" is protected and used outside of the class in which it is declared (reportPrivateUsage)
+529:  /Users/mishal/code/work/qrius-pyinj/tests/test_performance.py:4:20 - error: Import "Protocol" is not accessed (reportUnusedImport)
+530:  /Users/mishal/code/work/qrius-pyinj/tests/test_performance.py:4:30 - error: Import "runtime_checkable" is not accessed (reportUnusedImport)
+535:  /Users/mishal/code/work/qrius-pyinj/tests/test_performance.py:128:13 - error: Type of "append" is partially unknown
+537:  /Users/mishal/code/work/qrius-pyinj/tests/test_performance.py:131:31 - error: Argument type is partially unknown
+540:  /Users/mishal/code/work/qrius-pyinj/tests/test_performance.py:131:56 - error: Argument type is partially unknown
+545:  /Users/mishal/code/work/qrius-pyinj/tests/test_performance.py:167:13 - error: Type of "append" is partially unknown
+547:  /Users/mishal/code/work/qrius-pyinj/tests/test_performance.py:170:35 - error: Argument type is partially unknown
+550:  /Users/mishal/code/work/qrius-pyinj/tests/test_performance.py:170:59 - error: Argument type is partially unknown
+553:  /Users/mishal/code/work/qrius-pyinj/tests/test_performance.py:263:13 - error: Type of "token" is partially unknown
+555:  /Users/mishal/code/work/qrius-pyinj/tests/test_performance.py:263:21 - error: Argument missing for parameter "type_" (reportCallIssue)
+556:  /Users/mishal/code/work/qrius-pyinj/tests/test_performance.py:263:43 - error: No parameter named "expected_type" (reportCallIssue)
+557:  /Users/mishal/code/work/qrius-pyinj/tests/test_performance.py:264:32 - error: Argument type is partially unknown
+560:  /Users/mishal/code/work/qrius-pyinj/tests/test_performance.py:265:27 - error: Argument type is partially unknown
+568:  /Users/mishal/code/work/qrius-pyinj/tests/test_threading.py:9:8 - error: Import "pytest" is not accessed (reportUnusedImport)
+569:  /Users/mishal/code/work/qrius-pyinj/tests/test_threading.py:20:9 - error: Type of "token" is partially unknown
+571:  /Users/mishal/code/work/qrius-pyinj/tests/test_threading.py:25:13 - error: Return type, "dict[Unknown, Unknown]", is partially unknown (reportUnknownParameterType)
+572:  /Users/mishal/code/work/qrius-pyinj/tests/test_threading.py:25:35 - error: Expected type arguments for generic class "dict" (reportMissingTypeArgument)
+573:  /Users/mishal/code/work/qrius-pyinj/tests/test_threading.py:31:20 - error: Return type, "dict[Unknown, Unknown]", is partially unknown (reportUnknownVariableType)
+574:  /Users/mishal/code/work/qrius-pyinj/tests/test_threading.py:33:28 - error: Argument type is partially unknown
+577:  /Users/mishal/code/work/qrius-pyinj/tests/test_threading.py:33:35 - error: Argument type is partially unknown
+581:  /Users/mishal/code/work/qrius-pyinj/tests/test_threading.py:40:36 - error: Argument type is partially unknown
+594:  /Users/mishal/code/work/qrius-pyinj/tests/test_threading.py:154:13 - error: Type of "append" is partially unknown
+596:  /Users/mishal/code/work/qrius-pyinj/tests/test_threading.py:157:13 - error: Type of "thread" is unknown (reportUnknownVariableType)
+597:  /Users/mishal/code/work/qrius-pyinj/tests/test_threading.py:158:13 - error: Type of "join" is unknown (reportUnknownMemberType)
+599:  /Users/mishal/code/work/qrius-pyinj/tests/test_threading.py:193:17 - error: Type of "append" is partially unknown
+604:  /Users/mishal/code/work/qrius-pyinj/tests/test_threading.py:208:20 - error: Argument type is partially unknown
+608:  /Users/mishal/code/work/qrius-pyinj/tests/test_threading.py:234:13 - error: Type of "append" is partially unknown
+612:  /Users/mishal/code/work/qrius-pyinj/tests/test_threading.py:243:20 - error: Argument type is partially unknown
+615:  /Users/mishal/code/work/qrius-pyinj/tests/test_threading.py:244:13 - error: Type of "result" is unknown (reportUnknownVariableType)
+616:  /Users/mishal/code/work/qrius-pyinj/tests/test_threading.py:274:21 - error: Declaration "token" is obscured by a declaration of the same name (reportRedeclaration)

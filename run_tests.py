@@ -2,7 +2,6 @@
 """Test runner for pyinj."""
 
 import sys
-import os
 from pathlib import Path
 
 # Add src to path
@@ -14,13 +13,16 @@ import pytest
 
 if __name__ == "__main__":
     # Run tests
-    exit_code = pytest.main([
-        "tests/",
-        "-v",
-        "--tb=short",
-        "--color=yes",
-        "-p", "no:cacheprovider",  # Disable cache
-        "--no-cov",  # Disable coverage
-    ])
-    
+    exit_code = pytest.main(
+        [
+            "tests/",
+            "-v",
+            "--tb=short",
+            "--color=yes",
+            "-p",
+            "no:cacheprovider",  # Disable cache
+            "--no-cov",  # Disable coverage
+        ]
+    )
+
     sys.exit(exit_code)

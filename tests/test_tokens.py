@@ -1,18 +1,21 @@
 """Tests for enhanced Token implementation (singular)."""
 
-import pytest
 from dataclasses import FrozenInstanceError
+
+import pytest
 
 from pyinj.tokens import Scope, Token, TokenFactory
 
 
 class Database:
     """Test class for type annotations."""
+
     pass
 
 
 class Cache:
     """Another test class."""
+
     pass
 
 

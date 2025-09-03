@@ -112,7 +112,9 @@ def mock_http_client() -> HttpClient:
 
 
 @pytest.fixture
-async def mock_servicem8_client(api_key_auth: APIKeyAuth, autospec_httpclient: HttpClient):
+async def mock_servicem8_client(
+    api_key_auth: APIKeyAuth, autospec_httpclient: HttpClient
+):
     """Create a ServiceM8Client using DI overrides for HTTP client."""
     async with ServiceM8Client(api_key_auth, http_client=autospec_httpclient) as client:
         yield client
@@ -146,7 +148,9 @@ def autospec_httpclient(mocker: MockerFixture) -> HttpClient:
 
 
 def make_response(
-    status: int = 200, json_data: Any | None = None, headers: dict[str, str] | None = None
+    status: int = 200,
+    json_data: Any | None = None,
+    headers: dict[str, str] | None = None,
 ) -> httpx.Response:
     if json_data is not None:
         return httpx.Response(status, json=json_data, headers=headers)
@@ -407,7 +411,9 @@ def test_config() -> dict[str, Any]:
         "base_url": os.getenv("SERVICEM8_TEST_URL", "https://api.servicem8.com"),
         "api_key": os.getenv("SERVICEM8_TEST_API_KEY", "test-api-key-12345"),
         "oauth_client_id": os.getenv("SERVICEM8_TEST_CLIENT_ID", "test-client-id"),
-        "oauth_client_secret": os.getenv("SERVICEM8_TEST_CLIENT_SECRET", "test-client-secret"),
+        "oauth_client_secret": os.getenv(
+            "SERVICEM8_TEST_CLIENT_SECRET", "test-client-secret"
+        ),
         "timeout": float(os.getenv("SERVICEM8_TEST_TIMEOUT", "30.0")),
         "max_retries": int(os.getenv("SERVICEM8_TEST_MAX_RETRIES", "3")),
     }
@@ -516,7 +522,10 @@ def auth_scenario(
 @pytest.fixture(
     params=[
         {"expires_delta": timedelta(hours=1), "should_be_valid": True},
-        {"expires_delta": timedelta(minutes=3), "should_be_valid": False},  # Within 5-min buffer
+        {
+            "expires_delta": timedelta(minutes=3),
+            "should_be_valid": False,
+        },  # Within 5-min buffer
         {"expires_delta": timedelta(hours=-1), "should_be_valid": False},  # Expired
     ]
 )
@@ -526,7 +535,11 @@ def token_scenario(
     """Parametrized token expiry scenarios."""
     params = request.param
     token = token_info_factory(expires_delta=params["expires_delta"])
-    return {"token": token, "scenario": params, "should_be_valid": params["should_be_valid"]}
+    return {
+        "token": token,
+        "scenario": params,
+        "should_be_valid": params["should_be_valid"],
+    }
 
 
 # Resource test data factories
@@ -536,7 +549,9 @@ def job_data_factory() -> Callable[..., dict[str, Any]]:
     import uuid
 
     def _create_job_data(
-        job_address: str | None = None, job_description: str | None = None, **kwargs: Any
+        job_address: str | None = None,
+        job_description: str | None = None,
+        **kwargs: Any,
     ) -> dict[str, Any]:
         unique_id = str(uuid.uuid4())[:8]
         return {
