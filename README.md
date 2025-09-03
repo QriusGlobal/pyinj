@@ -3,6 +3,7 @@
 [![Python Version](https://img.shields.io/badge/python-3.13+-blue.svg)](https://python.org)
 [![Type Checked](https://img.shields.io/badge/type--checked-basedpyright-blue.svg)](https://github.com/DetachHead/basedpyright)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Docs](https://img.shields.io/badge/docs-mkdocs--material-informational)](https://qriusglobal.github.io/pyinj/)
 
 > Status: Beta — Active development; breaking changes may occur between pre-releases.
 
@@ -22,6 +23,10 @@ A **type-safe** dependency injection container for Python 3.13+ that provides:
 - 🛡️ **Protocol-based type safety**
 - 🏭 **Metaclass auto-registration**
 - 📦 **Zero external dependencies**
+
+## Documentation
+
+Full docs: https://qriusglobal.github.io/pyinj/
 
 ## Quick Start
 
