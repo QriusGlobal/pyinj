@@ -169,6 +169,19 @@ def analyze_dependencies(func: Callable[..., Any]) -> dict[str, type | Token | I
             # Fallback: plain type annotation (non-builtin class/protocol)
             deps[name] = annotation
 
+        elif isinstance(param.annotation, str) and "Inject[" in param.annotation:
+            # Last-resort: parse string annotations from future annotations
+            inner = param.annotation.strip()
+            try:
+                inner_type_str = inner[inner.find("[") + 1 : inner.rfind("]")]
+                inner_type = eval(inner_type_str, func.__globals__, {})  # noqa: S307 (trusted test context)
+                marker = Inject()
+                marker._type = inner_type
+                deps[name] = marker
+            except Exception:
+                # Ignore if we cannot resolve
+                pass
+
     return deps
 
 
