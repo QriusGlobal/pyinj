@@ -11,8 +11,7 @@ import builtins
 from collections.abc import Callable
 from functools import lru_cache, wraps
 from inspect import Parameter, iscoroutinefunction, signature
-from typing import get_type_hints
-from typing import Any, TypeVar, cast, get_args, get_origin
+from typing import Any, TypeVar, cast, get_args, get_origin, get_type_hints
 
 from .protocols import Resolvable
 from .tokens import Token
