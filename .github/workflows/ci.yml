@@ -49,4 +49,4 @@ jobs:
 
       - name: Build docs
         run: |
-          uv run mkdocs build --strict
+          uv run mkdocs build

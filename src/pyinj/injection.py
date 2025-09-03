@@ -286,14 +286,12 @@ def resolve_dependencies(
                 # Call the provider
                 resolved[name] = spec.provider()
             elif spec.type:
-                # Create token from type
-                token = Token(spec.type.__name__, spec.type)
-                resolved[name] = container.get(token)
+                # Resolve by type
+                resolved[name] = container.get(spec.type)
 
         elif isinstance(spec, type):
             # Direct type annotation
-            token = Token(spec.__name__, spec)
-            resolved[name] = container.get(token)
+            resolved[name] = container.get(spec)
 
     return resolved
 
@@ -341,20 +339,18 @@ async def resolve_dependencies_async(
                     loop = asyncio.get_event_loop()
                     tasks[name] = loop.run_in_executor(None, spec.provider)
             elif spec.type:
-                token = Token(spec.type.__name__, spec.type)
                 if hasattr(container, "aget"):
-                    tasks[name] = asyncio.create_task(container.aget(token))
+                    tasks[name] = asyncio.create_task(container.aget(spec.type))
                 else:
                     loop = asyncio.get_event_loop()
-                    tasks[name] = loop.run_in_executor(None, container.get, token)
+                    tasks[name] = loop.run_in_executor(None, container.get, spec.type)
 
         elif isinstance(spec, type):
-            token = Token(spec.__name__, spec)
             if hasattr(container, "aget"):
-                tasks[name] = asyncio.create_task(container.aget(token))
+                tasks[name] = asyncio.create_task(container.aget(spec))
             else:
                 loop = asyncio.get_event_loop()
-                tasks[name] = loop.run_in_executor(None, container.get, token)
+                tasks[name] = loop.run_in_executor(None, container.get, spec)
 
     # Resolve all tasks in parallel
     if tasks:
