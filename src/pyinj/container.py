@@ -147,8 +147,8 @@ class Container(ContextualContainer):
         self,
         token: Token[Any] | type[Any],
         provider: Provider,
-        *,
         scope: Scope | None = None,
+        *,
         tags: tuple[str, ...] = (),
     ) -> Container:
         """Register a provider for a token.
@@ -466,6 +466,19 @@ class Container(ContextualContainer):
             f"singletons={len(self._singletons)}, "
             f"cache_hit_rate={self.cache_hit_rate:.2%})"
         )
+
+    # ============= Decorator Alias =============
+
+    def inject(self, func: Callable[..., Any] | None = None, *, cache: bool = True) -> Callable[..., Any]:
+        """Alias to :func:`pyinj.injection.inject` bound to this container.
+
+        Enables ``@container.inject`` usage in addition to ``@inject(container=container)``.
+        """
+        from .injection import inject as _inject
+
+        if func is None:
+            return _inject(container=self, cache=cache)
+        return _inject(func, container=self, cache=cache)
 
     # ============= Context Managers & Cleanup =============
 

@@ -11,6 +11,7 @@ import builtins
 from collections.abc import Callable
 from functools import lru_cache, wraps
 from inspect import Parameter, iscoroutinefunction, signature
+from typing import get_type_hints
 from typing import Any, TypeVar, cast, get_args, get_origin
 
 from .protocols import Resolvable
@@ -123,6 +124,11 @@ def analyze_dependencies(func: Callable[..., Any]) -> dict[str, type | Token | I
         Dictionary mapping parameter names to their injection specs
     """
     sig = signature(func)
+    # Resolve annotations (handles from __future__ import annotations)
+    try:
+        resolved = get_type_hints(func, include_extras=True)
+    except Exception:
+        resolved = {}
     deps: dict[str, type | Token | Inject] = {}
 
     for name, param in sig.parameters.items():
@@ -130,7 +136,7 @@ def analyze_dependencies(func: Callable[..., Any]) -> dict[str, type | Token | I
         if param.kind in (Parameter.VAR_POSITIONAL, Parameter.VAR_KEYWORD):
             continue
 
-        annotation = param.annotation
+        annotation = resolved.get(name, param.annotation)
 
         # Skip if no annotation
         if annotation is Parameter.empty:
