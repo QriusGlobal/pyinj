@@ -13,4 +13,3 @@ rules:
     require-starting-space: true
   document-start:
     present: false
-
