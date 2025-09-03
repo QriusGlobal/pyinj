@@ -22,14 +22,10 @@ Quick start:
 
 from pyinj.container import Container, get_default_container, set_default_container
 from pyinj.contextual import ContextualContainer, RequestScope, SessionScope
+from pyinj.exceptions import CircularDependencyError, PyInjError, ResolutionError
 from pyinj.injection import Depends, Given, Inject, inject
 from pyinj.metaclasses import Injectable
 from pyinj.tokens import Scope, Token, TokenFactory
-from pyinj.exceptions import (
-    PyInjError,
-    ResolutionError,
-    CircularDependencyError,
-)
 
 __version__ = "1.0.1b1"
 __author__ = "Qrius Global"

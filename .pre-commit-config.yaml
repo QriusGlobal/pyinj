@@ -14,9 +14,11 @@ repos:
     hooks:
       - id: basedpyright
         name: basedpyright
-        entry: bash -lc 'basedpyright src/ tests/'
-        language: system
-        pass_filenames: false
+        entry: basedpyright
+        language: python
+        files: ^(src/|tests/)
+        additional_dependencies: [basedpyright]
+        args: ["src/", "tests/"]
 
       - id: actionlint
         name: actionlint (GitHub Actions)
