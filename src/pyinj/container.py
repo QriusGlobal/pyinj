@@ -75,6 +75,7 @@ class Container(ContextualContainer):
 
         # Override less-precise base attributes with typed variants
         self._providers: dict[Token[Any], Provider] = {}
+        self._token_scopes: dict[Token[Any], Scope] = {}
         self._singletons: dict[Token[Any], Any] = {}
         self._async_locks: dict[Token[Any], asyncio.Lock] = {}
 
@@ -172,7 +173,8 @@ class Container(ContextualContainer):
                 token.__name__, token, scope=scope or Scope.TRANSIENT, tags=tags
             )
         elif scope is not None:
-            token = token.with_scope(scope)
+            # Record desired scope without changing the token identity
+            self._token_scopes[token] = scope
 
         # Validate provider
         if not callable(provider):
@@ -301,15 +303,28 @@ class Container(ContextualContainer):
                 )
 
             # Create instance based on scope
-            if token.scope == Scope.SINGLETON:
+            effective_scope = self._token_scopes.get(token, token.scope)
+            if effective_scope == Scope.SINGLETON:
                 with self._singleton_locks[token]:
                     if token in self._singletons:
                         return self._singletons[token]
+                    if asyncio.iscoroutinefunction(provider):
+                        raise ResolutionError(
+                            token,
+                            [],
+                            "Provider is async; use aget() for async providers",
+                        )
                     instance = provider()
                     self._validate_and_track(token, instance)
                     self._singletons[token] = instance
                     return instance
             else:
+                if asyncio.iscoroutinefunction(provider):
+                    raise ResolutionError(
+                        token,
+                        [],
+                        "Provider is async; use aget() for async providers",
+                    )
                 instance = provider()
                 self._validate_and_track(token, instance)
                 self.store_in_context(token, instance)
@@ -351,7 +366,8 @@ class Container(ContextualContainer):
                 )
 
             # Create instance based on scope
-            if token.scope == Scope.SINGLETON:
+            effective_scope = self._token_scopes.get(token, token.scope)
+            if effective_scope == Scope.SINGLETON:
                 # Ensure async lock exists
                 if token not in self._async_locks:
                     self._async_locks[token] = asyncio.Lock()
@@ -510,6 +526,10 @@ class Container(ContextualContainer):
         """Async close: close tracked resources and clear caches."""
         await self.__aexit__(None, None, None)
         self.clear()
+
+    async def dispose(self) -> None:
+        """Alias for aclose to align with tests and docs."""
+        await self.aclose()
 
     @contextmanager
     def use_overrides(self, mapping: dict[Token[Any], Any]) -> Any:
