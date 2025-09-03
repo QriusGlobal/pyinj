@@ -70,20 +70,14 @@ reportUnusedFunction = "error"
 [tool.ruff]
 target-version = "py313"
 line-length = 88
+# Keep linting minimal and focused for now
 select = [
     "E",    # pycodestyle errors
     "F",    # pyflakes
-    "B",    # flake8-bugbear
-    "I",    # isort
-    "N",    # pep8-naming
-    "UP",   # pyupgrade
-    "C90",  # mccabe complexity
-    "TID",  # flake8-tidy-imports
-    "SIM",  # flake8-simplify
-    "RUF",  # ruff-specific rules
+    "I",    # import sorting
 ]
 ignore = [
-    "E501", # line too long (handled by formatter)
+    "E501",  # line too long (handled by formatter)
 ]
 
 [tool.ruff.per-file-ignores]

@@ -15,9 +15,9 @@ from types import MappingProxyType
 from typing import Any, TypeVar, cast
 
 from .contextual import ContextualContainer
-from .tokens import Scope, Token, TokenFactory
-from .protocols import SupportsAsyncClose, SupportsClose
 from .exceptions import CircularDependencyError, ResolutionError
+from .protocols import SupportsAsyncClose, SupportsClose
+from .tokens import Scope, Token, TokenFactory
 
 __all__ = ["Container", "get_default_container", "set_default_container"]
 
@@ -44,13 +44,13 @@ def set_default_container(container: Container) -> None:
 
 
 class Container(ContextualContainer):
-    """Ergonomic, type‑safe DI container with async support.
+    """Ergonomic, type-safe DI container with async support.
 
     Features:
     - O(1) lookups with a compact registry
-    - Thread/async‑safe singleton initialization
+    - Thread/async-safe singleton initialization
     - Contextual scoping using ``contextvars`` (request/session)
-    - Scala‑inspired "given" instances for testability
+    - Scala-inspired "given" instances for testability
     - Method chaining for concise setup and batch operations
 
     Example:
@@ -85,7 +85,9 @@ class Container(ContextualContainer):
 
         # Thread safety
         self._lock: threading.RLock = threading.RLock()
-        self._singleton_locks: dict[Token[Any], threading.Lock] = defaultdict(threading.Lock)
+        self._singleton_locks: dict[Token[Any], threading.Lock] = defaultdict(
+            threading.Lock
+        )
 
         # Track dependencies for graph
         self._dependencies: dict[Token[Any], set[Token[Any]]] = defaultdict(set)
@@ -110,7 +112,9 @@ class Container(ContextualContainer):
                     return registered
             return Token(spec.__name__, spec)
         # Disallow string-based tokens for type safety
-        raise TypeError("Token specification must be a Token or type; strings are not supported")
+        raise TypeError(
+            "Token specification must be a Token or type; strings are not supported"
+        )
 
     def _get_override(self, token: Token[Any]) -> Any | None:
         current = self._overrides.get()
@@ -122,7 +126,7 @@ class Container(ContextualContainer):
         stack = getattr(self._local, "resolving", None)
         if not isinstance(stack, list):
             new_stack: list[Token[Any]] = []
-            setattr(self._local, "resolving", new_stack)
+            self._local.resolving = new_stack
             return new_stack
         return cast(list[Token[Any]], stack)
 
@@ -183,20 +187,26 @@ class Container(ContextualContainer):
 
         return self  # Enable chaining
 
-    def register_singleton(self, token: Token[Any] | type[Any], provider: Provider) -> Container:
-        """Register a singleton‑scoped dependency."""
+    def register_singleton(
+        self, token: Token[Any] | type[Any], provider: Provider
+    ) -> Container:
+        """Register a singleton-scoped dependency."""
         return self.register(token, provider, scope=Scope.SINGLETON)
 
-    def register_request(self, token: Token[Any] | type[Any], provider: Provider) -> Container:
-        """Register a request‑scoped dependency."""
+    def register_request(
+        self, token: Token[Any] | type[Any], provider: Provider
+    ) -> Container:
+        """Register a request-scoped dependency."""
         return self.register(token, provider, scope=Scope.REQUEST)
 
-    def register_transient(self, token: Token[Any] | type[Any], provider: Provider) -> Container:
-        """Register a transient‑scoped dependency."""
+    def register_transient(
+        self, token: Token[Any] | type[Any], provider: Provider
+    ) -> Container:
+        """Register a transient-scoped dependency."""
         return self.register(token, provider, scope=Scope.TRANSIENT)
 
     def register_value(self, token: Token[Any] | type[Any], value: Any) -> Container:
-        """Register a pre‑created value as a singleton."""
+        """Register a pre-created value as a singleton."""
         if isinstance(token, type):
             token = self.tokens.singleton(token.__name__, token)
         # token is now a Token[Any]
@@ -286,7 +296,9 @@ class Container(ContextualContainer):
             # Get provider
             provider = self._providers.get(token)
             if provider is None:
-                raise ResolutionError(token, [], f"No provider registered for token '{token.name}'")
+                raise ResolutionError(
+                    token, [], f"No provider registered for token '{token.name}'"
+                )
 
             # Create instance based on scope
             if token.scope == Scope.SINGLETON:
@@ -302,7 +314,6 @@ class Container(ContextualContainer):
                 self._validate_and_track(token, instance)
                 self.store_in_context(token, instance)
                 return instance
-        
 
     async def aget(self, token: Token[Any] | type[Any]) -> Any:
         """Resolve a dependency asynchronously.
@@ -335,7 +346,9 @@ class Container(ContextualContainer):
             # Get provider
             provider = self._providers.get(token)
             if provider is None:
-                raise ResolutionError(token, [], f"No provider registered for token '{token.name}'")
+                raise ResolutionError(
+                    token, [], f"No provider registered for token '{token.name}'"
+                )
 
             # Create instance based on scope
             if token.scope == Scope.SINGLETON:
@@ -364,11 +377,12 @@ class Container(ContextualContainer):
 
                 self.store_in_context(token, instance)
                 return instance
-        
 
     # ============= Batch Operations =============
 
-    def batch_register(self, registrations: list[tuple[Token[Any], Provider]]) -> Container:
+    def batch_register(
+        self, registrations: list[tuple[Token[Any], Provider]]
+    ) -> Container:
         """Register multiple dependencies at once."""
         for token, provider in registrations:
             self.register(token, provider)
@@ -384,7 +398,9 @@ class Container(ContextualContainer):
                 results[tk] = self.get(tk)
         return results
 
-    async def batch_resolve_async(self, tokens: list[Token[Any]]) -> dict[Token[Any], Any]:
+    async def batch_resolve_async(
+        self, tokens: list[Token[Any]]
+    ) -> dict[Token[Any], Any]:
         """Async batch resolution with parallel execution."""
         tasks = {token: self.aget(token) for token in tokens}
         results_list: list[Any] = await asyncio.gather(*tasks.values())
@@ -419,7 +435,7 @@ class Container(ContextualContainer):
     # ============= Utilities =============
 
     def get_providers_view(self) -> MappingProxyType:
-        """Return a read‑only view of registered providers."""
+        """Return a read-only view of registered providers."""
         return MappingProxyType(self._providers)
 
     def has(self, token: Token[Any] | type[Any]) -> bool:

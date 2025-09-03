@@ -10,7 +10,7 @@ if True:  # for type checkers without creating import cycles
     except Exception:  # pragma: no cover - import-time typing only
         Token = Any  # type: ignore
 
-__all__ = ["SupportsAsyncClose", "SupportsClose", "Resolvable"]
+__all__ = ["Resolvable", "SupportsAsyncClose", "SupportsClose"]
 
 
 @runtime_checkable
@@ -38,8 +38,12 @@ T_co = TypeVar("T_co", covariant=True)
 class Resolvable(Protocol[T_co]):
     """Protocol for containers that can resolve dependencies sync/async."""
 
-    def get(self, token: "Token[T_co] | type[T_co]") -> T_co:  # pragma: no cover - protocol
+    def get(
+        self, token: Token[T_co] | type[T_co]
+    ) -> T_co:  # pragma: no cover - protocol
         ...
 
-    async def aget(self, token: "Token[T_co] | type[T_co]") -> T_co:  # pragma: no cover - protocol
+    async def aget(
+        self, token: Token[T_co] | type[T_co]
+    ) -> T_co:  # pragma: no cover - protocol
         ...

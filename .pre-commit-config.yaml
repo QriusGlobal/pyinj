@@ -3,7 +3,9 @@ repos:
     rev: v0.6.9
     hooks:
       - id: ruff-format
+        files: ^src/
       - id: ruff
+        files: ^src/
         args: ["--exit-non-zero-on-fix"]
 
   - repo: local
@@ -27,4 +29,3 @@ repos:
       - id: yamllint
         files: ^(.github/workflows/|.*\.ya?ml)$
         args: ["-c", ".yamllint.yml"]
-

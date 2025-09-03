@@ -1,12 +1,12 @@
-"""PyInj — Type‑safe dependency injection for modern Python.
+"""PyInj - Type-safe dependency injection for modern Python.
 
-Status: Beta — APIs may change between pre‑releases. Pin exact versions in production.
+Status: Beta - APIs may change between pre-releases. Pin exact versions in production.
 
 Highlights:
 - Immutable tokens with pre-computed hashes (O(1) lookups)
 - ContextVar-based scoping for async and thread safety
 - `@inject` decorator (FastAPI-inspired) and lightweight markers
-- Scala‑style "given" instances for ergonomic overrides
+- Scala-style "given" instances for ergonomic overrides
 - Zero runtime dependencies
 
 Quick start:

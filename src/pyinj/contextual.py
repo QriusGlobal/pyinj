@@ -260,7 +260,9 @@ class ScopeManager:
         if current is None:
             new_context = ChainMap(session_cache, self._container._singletons)
         else:
-            new_context = ChainMap(current.maps[0], session_cache, self._container._singletons)
+            new_context = ChainMap(
+                current.maps[0], session_cache, self._container._singletons
+            )
         context_token = _context_stack.set(new_context)
         try:
             yield

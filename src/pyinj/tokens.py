@@ -18,7 +18,7 @@ class Scope(Enum):
     Values:
         SINGLETON: One instance for the process/container.
         REQUEST: One instance per request context.
-        SESSION: One instance per longer‑lived session context.
+        SESSION: One instance per longer-lived session context.
         TRANSIENT: A new instance for every resolution.
     """
 
@@ -33,7 +33,7 @@ class Token(Generic[T]):
     """Immutable, hashable identifier for a typed dependency.
 
     Args:
-        name: Human‑readable name for the binding.
+        name: Human-readable name for the binding.
         type_: The expected Python type of the dependency.
         scope: Lifecycle scope. Defaults to TRANSIENT.
         qualifier: Optional qualifier to differentiate multiple bindings of the same type.
@@ -85,7 +85,7 @@ class Token(Generic[T]):
 
     @property
     def metadata(self) -> MappingProxyType[str, Any]:
-        """Read‑only view of metadata."""
+        """Read-only view of metadata."""
         return self._metadata  # type: ignore[return-value]
 
     @property
@@ -182,19 +182,19 @@ class TokenFactory:
         return token
 
     def singleton(self, name: str, type_: type[T]) -> Token[T]:
-        """Create a singleton‑scoped token."""
+        """Create a singleton-scoped token."""
         return self.create(name, type_, scope=Scope.SINGLETON)
 
     def request(self, name: str, type_: type[T]) -> Token[T]:
-        """Create a request‑scoped token."""
+        """Create a request-scoped token."""
         return self.create(name, type_, scope=Scope.REQUEST)
 
     def session(self, name: str, type_: type[T]) -> Token[T]:
-        """Create a session‑scoped token."""
+        """Create a session-scoped token."""
         return self.create(name, type_, scope=Scope.SESSION)
 
     def transient(self, name: str, type_: type[T]) -> Token[T]:
-        """Create a transient‑scoped token (default)."""
+        """Create a transient-scoped token (default)."""
         return self.create(name, type_, scope=Scope.TRANSIENT)
 
     def qualified(

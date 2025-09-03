@@ -1,6 +1,6 @@
 """Lightweight decorators and markers for function parameter injection.
 
-These tools are inspired by FastAPI but remain framework‑agnostic and
+These tools are inspired by FastAPI but remain framework-agnostic and
 work with synchronous and asynchronous callables.
 """
 
@@ -11,18 +11,17 @@ import builtins
 from collections.abc import Callable
 from functools import lru_cache, wraps
 from inspect import Parameter, iscoroutinefunction, signature
-from typing import Any, TypeVar, get_args, get_origin, cast
+from typing import Any, TypeVar, cast, get_args, get_origin
 
 from .protocols import Resolvable
-
 from .tokens import Token
 
 __all__ = [
     "Depends",
     "Given",
     "Inject",
-    "analyze_dependencies",
     "InjectionAnalyzer",
+    "analyze_dependencies",
     "inject",
     "resolve_dependencies",
 ]
@@ -97,9 +96,9 @@ class Given:
         return Inject[item]
 
 
-def Depends[T](provider: Callable[..., T]) -> T:
+def Depends[T](provider: Callable[..., T]) -> T:  # noqa: N802
     """
-    FastAPI‑compatible ``Depends`` marker.
+    FastAPI-compatible ``Depends`` marker.
 
     Args:
         provider: Provider function for the dependency
