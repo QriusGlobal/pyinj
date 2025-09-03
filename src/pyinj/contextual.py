@@ -8,8 +8,8 @@ from collections.abc import AsyncIterator, Iterator
 from contextlib import asynccontextmanager, contextmanager
 from contextvars import ContextVar
 from contextvars import Token as ContextToken
-from types import MappingProxyType
-from typing import Any, TypeVar
+from types import TracebackType
+from typing import Any, TypeVar, cast
 from weakref import WeakValueDictionary
 
 from .tokens import Scope, Token
@@ -25,30 +25,24 @@ __all__ = [
 T = TypeVar("T")
 
 # Global context variable for DI scopes
-_context_stack: ContextVar[ChainMap | None] = ContextVar(
+_context_stack: ContextVar[ChainMap[Token[object], object] | None] = ContextVar(
     "pyinj_context_stack", default=None
 )
 
 # Session context for longer-lived dependencies
-_session_context: ContextVar[dict[Token, Any] | None] = ContextVar(
+_session_context: ContextVar[dict[Token[object], object] | None] = ContextVar(
     "pyinj_session_context", default=None
 )
 
 
-def get_current_context() -> MappingProxyType | None:
-    """
-    Get current dependency context as read-only view.
-
-    Returns:
-        Read-only mapping of current context or None
-    """
-    context = _context_stack.get()
-    if context is not None:
-        return MappingProxyType(context)
-    return None
+def get_current_context() -> ChainMap[Token[object], object] | None:
+    """Get current dependency context."""
+    return _context_stack.get()
 
 
-def set_context(context: ChainMap) -> ContextToken:
+def set_context(
+    context: ChainMap[Token[object], object]
+) -> ContextToken[ChainMap[Token[object], object] | None]:
     """
     Set the current dependency context.
 
@@ -71,19 +65,20 @@ class ContextualContainer:
     def __init__(self) -> None:
         """Initialize contextual container."""
         # Singleton cache (process-wide)
-        self._singletons: dict[Token, Any] = {}
+        self._singletons: dict[Token[object], object] = {}
 
         # Weak cache for transients (auto-cleanup)
-        self._transients: WeakValueDictionary = WeakValueDictionary()
+        self._transients: WeakValueDictionary[Token[object], object] = WeakValueDictionary()
 
-        # Providers registry
-        self._providers: dict[Token, Any] = {}
+        # Providers registry (value type depends on concrete container)
+        self._providers: dict[Token[object], Any] = {}
 
         # Async locks for thread-safe singleton creation
-        self._async_locks: dict[Token, asyncio.Lock] = {}
+        self._async_locks: dict[Token[object], asyncio.Lock] = {}
 
         # Track resources for cleanup
-        self._resources: list[Any] = []
+        from .protocols import SupportsAsyncClose, SupportsClose
+        self._resources: list[SupportsClose | SupportsAsyncClose] = []
 
         # Scope manager (RAII contexts, precedence enforcement)
         self._scope_manager = ScopeManager(self)
@@ -96,7 +91,8 @@ class ContextualContainer:
         """
         context = _context_stack.get()
         if context and hasattr(context, "maps") and context.maps:
-            context.maps[0][token] = instance
+            # The top-most map holds request-local values
+            context.maps[0][cast(Token[object], token)] = cast(object, instance)
 
     @contextmanager
     def request_scope(self) -> Iterator[ContextualContainer]:
@@ -134,7 +130,7 @@ class ContextualContainer:
         with self._scope_manager.session_scope():
             yield self
 
-    def _cleanup_scope(self, cache: dict[Token, Any]) -> None:
+    def _cleanup_scope(self, cache: dict[Token[object], Any]) -> None:
         """
         Clean up resources in LIFO order.
 
@@ -151,14 +147,14 @@ class ContextualContainer:
                 # Log but don't fail cleanup
                 pass
 
-    async def _async_cleanup_scope(self, cache: dict[Token, Any]) -> None:
+    async def _async_cleanup_scope(self, cache: dict[Token[object], Any]) -> None:
         """
         Async cleanup of resources.
 
         Args:
             cache: Cache of resources to clean up
         """
-        tasks = []
+        tasks: list[Any] = []
 
         for resource in reversed(list(cache.values())):
             if hasattr(resource, "aclose"):
@@ -220,7 +216,7 @@ class ScopeManager:
 
     @contextmanager
     def request_scope(self) -> Iterator[None]:
-        request_cache: dict[Token, Any] = {}
+        request_cache: dict[Token[object], object] = {}
         current = _context_stack.get()
         if current is None:
             new_context = ChainMap(request_cache, self._container._singletons)
@@ -235,7 +231,7 @@ class ScopeManager:
 
     @asynccontextmanager
     async def async_request_scope(self) -> AsyncIterator[None]:
-        request_cache: dict[Token, Any] = {}
+        request_cache: dict[Token[object], object] = {}
         current = _context_stack.get()
         if current is None:
             new_context = ChainMap(request_cache, self._container._singletons)
@@ -250,11 +246,12 @@ class ScopeManager:
 
     @contextmanager
     def session_scope(self) -> Iterator[None]:
-        session_cache = _session_context.get()
-        if session_cache is None:
-            session_cache = {}
+        existing = _session_context.get()
+        if existing is None:
+            session_cache: dict[Token[object], object] = {}
             session_token = _session_context.set(session_cache)
         else:
+            session_cache = existing
             session_token = None
         current = _context_stack.get()
         if current is None:
@@ -274,29 +271,29 @@ class ScopeManager:
     def resolve_from_context(self, token: Token[T]) -> T | None:
         context = _context_stack.get()
         if context and token in context:
-            return context[token]
+            return cast(T, context[cast(Token[object], token)])
         if token.scope == Scope.SESSION:
             session = _session_context.get()
             if session and token in session:
-                return session[token]
+                return cast(T, session[cast(Token[object], token)])
         if token.scope == Scope.SINGLETON and token in self._container._singletons:
-            return self._container._singletons[token]
+            return cast(T, self._container._singletons[cast(Token[object], token)])
         if token.scope == Scope.TRANSIENT and token in self._container._transients:
-            return self._container._transients[token]
+            return cast(T, self._container._transients[cast(Token[object], token)])
         return None
 
     def store_in_context(self, token: Token[T], instance: T) -> None:
         if token.scope == Scope.SINGLETON:
-            self._container._singletons[token] = instance
+            self._container._singletons[cast(Token[object], token)] = cast(object, instance)
         elif token.scope == Scope.REQUEST:
             self._container._put_in_current_request_cache(token, instance)
         elif token.scope == Scope.SESSION:
             session = _session_context.get()
             if session is not None:
-                session[token] = instance
+                session[cast(Token[object], token)] = cast(object, instance)
         elif token.scope == Scope.TRANSIENT:
             try:
-                self._container._transients[token] = instance
+                self._container._transients[cast(Token[object], token)] = cast(object, instance)
             except TypeError:
                 pass
 
@@ -338,7 +335,12 @@ class RequestScope:
         self._context_manager.__enter__()
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
         """Exit request scope."""
         if self._context_manager:
             self._context_manager.__exit__(exc_type, exc_val, exc_tb)
@@ -349,7 +351,12 @@ class RequestScope:
         await self._async_context_manager.__aenter__()
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
         """Async exit request scope."""
         if self._async_context_manager:
             await self._async_context_manager.__aexit__(exc_type, exc_val, exc_tb)
@@ -379,7 +386,12 @@ class SessionScope:
         self._context_manager.__enter__()
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
         """Exit session scope."""
         if self._context_manager:
             self._context_manager.__exit__(exc_type, exc_val, exc_tb)

@@ -8,10 +8,12 @@ from __future__ import annotations
 
 import asyncio
 import builtins
-from collections.abc import Callable
+from typing import Callable, ParamSpec, TypeVar, overload, cast as tcast, Generic, TypeAlias, ClassVar
 from functools import lru_cache, wraps
 from inspect import Parameter, iscoroutinefunction, signature
-from typing import Any, TypeVar, cast, get_args, get_origin, get_type_hints
+from dataclasses import dataclass
+from enum import Enum, auto
+from typing import Any, Annotated, cast, get_args, get_origin, get_type_hints
 
 from .protocols import Resolvable
 from .tokens import Token
@@ -27,10 +29,11 @@ __all__ = [
 ]
 
 T = TypeVar("T")
-P = TypeVar("P")
+P = ParamSpec("P")
+R = TypeVar("R")
 
 
-class Inject:
+class Inject(Generic[T]):
     """
     Marker for injected dependencies (similar to FastAPI's ``Depends``).
 
@@ -44,7 +47,7 @@ class Inject:
             ...
     """
 
-    def __init__(self, provider: Callable | None = None) -> None:
+    def __init__(self, provider: Callable[..., T] | None = None) -> None:
         """
         Initialize an injection marker optionally carrying a provider.
 
@@ -52,27 +55,36 @@ class Inject:
             provider: Optional provider function
         """
         self.provider = provider
-        self._type: type | None = None
+        self._type: type[T] | None = None
 
-    def __class_getitem__(cls, item: builtins.type[T]) -> builtins.type[Inject]:
+    _typed_cache: ClassVar[dict[type[object], builtins.type]] = {}
+
+    def __class_getitem__(cls, item: builtins.type[T]) -> builtins.type["Inject[T]"]:
+        """Support Inject[Type] syntax without recursion and with caching.
+
+        Returns a cached subclass carrying the injection type, so that
+        repeated references to Inject[T] are identical across calls.
         """
-        Support Inject[Type] syntax.
+        cached = cls._typed_cache.get(item)
+        if cached is not None:
+            return tcast(builtins.type[Inject[T]], cached)
 
-        This allows type checkers to understand the type.
-        """
-
-        # Create a new class that remembers the type
-        class TypedInject(cls):
-            _inject_type = item
-
-        return TypedInject
+        name = f"Inject_{getattr(item, '__name__', 'T')}"
+        TypedInject = type(name, (cls,), {"_inject_type": item})
+        cls._typed_cache[item] = TypedInject
+        return tcast(builtins.type, TypedInject)
 
     @property
-    def type(self) -> builtins.type | None:
+    def type(self) -> builtins.type[T] | None:
         """Get the injected type if available."""
-        if hasattr(self.__class__, "_inject_type"):
-            return self.__class__._inject_type
+        t = getattr(self.__class__, "_inject_type", None)
+        if isinstance(t, type):
+            return t
         return self._type
+
+    def set_type(self, type_: builtins.type[T]) -> None:
+        """Set the injected type explicitly (used by analyzers)."""
+        self._type = type_
 
     def __repr__(self) -> str:
         """Readable representation."""
@@ -91,7 +103,7 @@ class Given:
             ...
     """
 
-    def __class_getitem__(cls, item: type[T]) -> Inject:
+    def __class_getitem__(cls, item: type[T]) -> builtins.type["Inject[T]"]:
         """Support Given[Type] syntax by delegating to Inject."""
         return Inject[item]
 
@@ -109,8 +121,25 @@ def Depends[T](provider: Callable[..., T]) -> T:  # noqa: N802
     return Inject(provider)  # type: ignore
 
 
+DependencyRequest: TypeAlias = type | Token[object] | Inject[object]
+
+
+class _DepKind(Enum):
+    TOKEN = auto()
+    TYPE = auto()
+    INJECT = auto()
+
+
+@dataclass(frozen=True)
+class _DepSpec:
+    kind: _DepKind
+    type_: type[Any] | None = None
+    token: Token[object] | None = None
+    provider: Callable[[], Any] | None = None
+
+
 @lru_cache(maxsize=256)
-def analyze_dependencies(func: Callable[..., Any]) -> dict[str, type | Token | Inject]:
+def analyze_dependencies(func: Callable[..., Any]) -> dict[str, DependencyRequest]:
     """
     Analyze function signature for injected dependencies.
 
@@ -128,7 +157,7 @@ def analyze_dependencies(func: Callable[..., Any]) -> dict[str, type | Token | I
         resolved = get_type_hints(func, include_extras=True)
     except Exception:
         resolved = {}
-    deps: dict[str, type | Token | Inject] = {}
+    deps: dict[str, DependencyRequest] = {}
 
     for name, param in sig.parameters.items():
         # Skip *args and **kwargs
@@ -142,27 +171,39 @@ def analyze_dependencies(func: Callable[..., Any]) -> dict[str, type | Token | I
             continue
 
         # Check various injection patterns
-        if _is_inject_type(annotation):
+        origin = get_origin(annotation)
+        args = get_args(annotation)
+
+        # 1) Annotated[T, Inject(...) | Token(...)]
+        if origin is Annotated and args:
+            dep_type = args[0]
+            metadata = args[1:]
+            for meta in metadata:
+                if isinstance(meta, Inject):
+                    marker = cast(Inject, meta)
+                    if not marker.type and isinstance(dep_type, type):
+                        marker.set_type(dep_type)
+                    deps[name] = marker
+                    break
+                if isinstance(meta, Token):
+                    deps[name] = meta
+                    break
+
+        elif _is_inject_type(annotation):
             # It's Inject[T] or Given[T]
             deps[name] = _extract_inject_spec(annotation, param.default)
 
         elif isinstance(param.default, Inject):
             # Default value is Inject()
-            deps[name] = param.default
-            if annotation != Parameter.empty:
+            marker = cast(Inject, param.default)
+            deps[name] = marker
+            if annotation != Parameter.empty and isinstance(annotation, type):
                 # Store the type from annotation
-                param.default._type = annotation
+                marker.set_type(annotation)
 
         elif isinstance(annotation, Token):
             # Direct Token annotation
             deps[name] = annotation
-
-        elif hasattr(annotation, "__metadata__"):
-            # Annotated[Type, metadata] pattern
-            for metadata in annotation.__metadata__:
-                if isinstance(metadata, Inject | Token):
-                    deps[name] = metadata
-                    break
 
         elif _is_plain_injectable_type(annotation):
             # Fallback: plain type annotation (non-builtin class/protocol)
@@ -174,8 +215,9 @@ def analyze_dependencies(func: Callable[..., Any]) -> dict[str, type | Token | I
             try:
                 inner_type_str = inner[inner.find("[") + 1 : inner.rfind("]")]
                 inner_type = eval(inner_type_str, func.__globals__, {})  # noqa: S307 (trusted test context)
-                marker = Inject()
-                marker._type = inner_type
+                inner_type = tcast(type[object], inner_type)
+                marker = Inject[object]()
+                marker.set_type(inner_type)
                 deps[name] = marker
             except Exception:
                 # Ignore if we cannot resolve
@@ -192,7 +234,7 @@ class InjectionAnalyzer:
     """
 
     @staticmethod
-    def build_plan(func: Callable[..., Any]) -> dict[str, type | Token | Inject]:
+    def build_plan(func: Callable[..., Any]) -> dict[str, DependencyRequest]:
         return analyze_dependencies(func)
 
 
@@ -229,8 +271,8 @@ def _is_plain_injectable_type(annotation: Any) -> bool:
 
 
 def _extract_inject_spec(
-    annotation: Any, default: Any = Parameter.empty
-) -> type | Token | Inject:
+    annotation: Any, default: Inject[object] | object = Parameter.empty
+) -> DependencyRequest:
     """Extract injection specification from annotation."""
     # Get the type from Inject[T]
     if hasattr(annotation, "_inject_type"):
@@ -240,20 +282,23 @@ def _extract_inject_spec(
         type_ = args[0] if args else None
 
     # If there's a default Inject instance, use it
+    if default is Parameter.empty:
+        return type_ or annotation
     if isinstance(default, Inject):
-        if type_ and not default._type:
-            default._type = type_
-        return default
+        marker = cast(Inject, default)
+        if type_ and not marker.type:
+            marker.set_type(type_)
+        return marker
 
     # Return just the type
     return type_ or annotation
 
 
 def resolve_dependencies(
-    deps: dict[str, type | Token | Inject],
-    container: Resolvable[Any],
-    overrides: dict[str, Any] | None = None,
-) -> dict[str, Any]:
+    deps: dict[str, DependencyRequest],
+    container: Resolvable[object],
+    overrides: dict[str, object] | None = None,
+) -> dict[str, object]:
     """
     Resolve dependencies synchronously.
 
@@ -265,41 +310,69 @@ def resolve_dependencies(
     Returns:
         Dictionary of resolved dependencies
     """
-    resolved: dict[str, Any] = {}
-    overrides = overrides or {}
-
-    for name, spec in deps.items():
-        # Check for override first
-        if name in overrides:
-            resolved[name] = overrides[name]
+    resolved: dict[str, object] = {}
+    ov = overrides or {}
+    for name, req in deps.items():
+        if name in ov:
+            resolved[name] = ov[name]
             continue
-
-        # Resolve based on spec type
-        if isinstance(spec, Token):
-            # Direct token
-            resolved[name] = container.get(spec)
-
-        elif isinstance(spec, Inject):
-            # Inject with optional provider
-            if spec.provider:
-                # Call the provider
-                resolved[name] = spec.provider()
-            elif spec.type:
-                # Resolve by type
-                resolved[name] = container.get(spec.type)
-
-        elif isinstance(spec, type):
-            # Direct type annotation
-            resolved[name] = container.get(spec)
-
+        spec = _to_spec(req)
+        resolved[name] = _resolve_one(spec, container)
     return resolved
 
 
+def _to_spec(spec: DependencyRequest) -> _DepSpec:
+    if isinstance(spec, Token):
+        return _DepSpec(kind=_DepKind.TOKEN, token=cast(Token[object], spec))
+    if isinstance(spec, Inject):
+        return _DepSpec(kind=_DepKind.INJECT, type_=spec.type, provider=spec.provider)
+    # else it's a type
+    return _DepSpec(kind=_DepKind.TYPE, type_=cast(type[Any], spec))
+
+
+def _resolve_one(spec: _DepSpec, container: Resolvable[object]) -> object:
+    if spec.kind is _DepKind.TOKEN:
+        return container.get(spec.token)
+    if spec.kind is _DepKind.INJECT:
+        if spec.provider is not None:
+            return spec.provider()
+        return container.get(cast(type[Any], spec.type_))
+    # TYPE
+    return container.get(cast(type[Any], spec.type_))
+
+
+async def _aresolve_one(spec: _DepSpec, container: Resolvable[object]) -> object:
+    if spec.kind is _DepKind.TOKEN:
+        if hasattr(container, "aget"):
+            return await container.aget(cast(Token[object], spec.token))
+        # Fallback
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(None, container.get, cast(Token[object], spec.token))
+    if spec.kind is _DepKind.INJECT:
+        if spec.provider is not None:
+            if iscoroutinefunction(spec.provider):
+                return await spec.provider()  # type: ignore[misc]
+            # Might return awaitable by convention
+            result = spec.provider()
+            if asyncio.iscoroutine(result):
+                return await cast(asyncio.Future[object], result)
+            return result
+        if hasattr(container, "aget"):
+            return await container.aget(cast(type[Any], spec.type_))
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(None, container.get, cast(type[Any], spec.type_))
+    # TYPE
+    if hasattr(container, "aget"):
+        return await container.aget(cast(type[Any], spec.type_))
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, container.get, cast(type[Any], spec.type_))
+
+
 async def resolve_dependencies_async(
-    deps: dict[str, type | Token | Inject],
-    container: Resolvable[Any],
-    overrides: dict[str, Any] | None = None,
-) -> dict[str, Any]:
+    deps: dict[str, DependencyRequest],
+    container: Resolvable[object],
+    overrides: dict[str, object] | None = None,
+) -> dict[str, object]:
     """
     Resolve dependencies asynchronously.
 
@@ -311,45 +384,16 @@ async def resolve_dependencies_async(
     Returns:
         Dictionary of resolved dependencies
     """
-    resolved: dict[str, Any] = {}
+    resolved: dict[str, object] = {}
     overrides = overrides or {}
-    tasks: dict[str, asyncio.Task[Any]] = {}
+    tasks: dict[str, asyncio.Task[object]] = {}
 
-    for name, spec in deps.items():
-        # Check for override first
+    for name, req in deps.items():
         if name in overrides:
             resolved[name] = overrides[name]
             continue
-
-        # Create resolution task based on spec type
-        if isinstance(spec, Token):
-            if hasattr(container, "aget"):
-                tasks[name] = asyncio.create_task(container.aget(spec))
-            else:
-                # Fallback to sync in executor
-                loop = asyncio.get_event_loop()
-                tasks[name] = loop.run_in_executor(None, container.get, spec)
-
-        elif isinstance(spec, Inject):
-            if spec.provider:
-                if iscoroutinefunction(spec.provider):
-                    tasks[name] = asyncio.create_task(spec.provider())
-                else:
-                    loop = asyncio.get_event_loop()
-                    tasks[name] = loop.run_in_executor(None, spec.provider)
-            elif spec.type:
-                if hasattr(container, "aget"):
-                    tasks[name] = asyncio.create_task(container.aget(spec.type))
-                else:
-                    loop = asyncio.get_event_loop()
-                    tasks[name] = loop.run_in_executor(None, container.get, spec.type)
-
-        elif isinstance(spec, type):
-            if hasattr(container, "aget"):
-                tasks[name] = asyncio.create_task(container.aget(spec))
-            else:
-                loop = asyncio.get_event_loop()
-                tasks[name] = loop.run_in_executor(None, container.get, spec)
+        spec = _to_spec(req)
+        tasks[name] = asyncio.create_task(_aresolve_one(spec, container))
 
     # Resolve all tasks in parallel
     if tasks:
@@ -360,12 +404,24 @@ async def resolve_dependencies_async(
     return resolved
 
 
+@overload
 def inject(
-    func: Callable[..., Any] | None = None,
+    func: Callable[P, R], *, container: Resolvable[Any] | None = ..., cache: bool = ...
+) -> Callable[P, R]:
+    ...
+
+@overload
+def inject(
+    func: None = ..., *, container: Resolvable[Any] | None = ..., cache: bool = ...
+) -> Callable[[Callable[P, R]], Callable[P, R]]:
+    ...
+
+def inject(
+    func: Callable[P, R] | None = None,
     *,
-    container: Any | None = None,
+    container: Resolvable[Any] | None = None,
     cache: bool = True,
-) -> Callable[..., Any]:
+) -> Callable[P, R] | Callable[[Callable[P, R]], Callable[P, R]]:
     """
     Decorator that injects dependencies into function parameters.
 
@@ -400,14 +456,14 @@ def inject(
             pass
     """
 
-    def decorator(fn: Callable[..., Any]) -> Callable[..., Any]:
+    def decorator(fn: Callable[P, R]) -> Callable[P, R]:
         # Analyze dependencies (cached if cache=True)
         deps = InjectionAnalyzer.build_plan(fn) if cache else None
 
         if iscoroutinefunction(fn):
 
             @wraps(fn)
-            async def async_wrapper(*args: object, **kwargs: object) -> Any:
+            async def async_wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
                 # Get dependencies if not cached
                 nonlocal deps
                 if deps is None:
@@ -423,7 +479,7 @@ def inject(
                     # Try to get default container without import cycle
                     from .container import get_default_container
 
-                    container = get_default_container()
+                    container = tcast(Resolvable[Any], get_default_container())
 
                 # Extract overrides from kwargs
                 overrides: dict[str, Any] = {}
@@ -437,14 +493,14 @@ def inject(
                 # Merge with kwargs
                 kwargs.update(resolved)
 
-                return await fn(*args, **kwargs)  # type: ignore[misc]
+                return await fn(*args, **kwargs)
 
-            return async_wrapper
+            return tcast(Callable[P, R], async_wrapper)
 
         else:
 
             @wraps(fn)
-            def sync_wrapper(*args: object, **kwargs: object) -> Any:
+            def sync_wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
                 # Get dependencies if not cached
                 nonlocal deps
                 if deps is None:
@@ -459,7 +515,7 @@ def inject(
                 if container is None:
                     from .container import get_default_container
 
-                    container = get_default_container()
+                    container = tcast(Resolvable[Any], get_default_container())
 
                 # Extract overrides from kwargs
                 overrides: dict[str, Any] = {}
@@ -473,9 +529,9 @@ def inject(
                 # Merge with kwargs
                 kwargs.update(resolved)
 
-                return fn(*args, **kwargs)  # type: ignore[misc]
+                return fn(*args, **kwargs)
 
-            return sync_wrapper
+            return tcast(Callable[P, R], sync_wrapper)
 
     # Handle both @inject and @inject(...) syntax
     if func is None:

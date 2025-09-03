@@ -73,14 +73,15 @@ class Token(Generic[T]):
     def __eq__(self, other: object) -> bool:  # pragma: no cover - trivial
         if not isinstance(other, Token):
             return False
-        if self._hash != other._hash:
+        other_token = cast("Token[object]", other)
+        if self._hash != other_token._hash:
             return False
         return (
             self.name == other.name
-            and self.type_ == other.type_
-            and self.scope == other.scope
-            and self.qualifier == other.qualifier
-            and self.tags == other.tags
+            and self.type_ == other_token.type_
+            and self.scope == other_token.scope
+            and self.qualifier == other_token.qualifier
+            and self.tags == other_token.tags
         )
 
     @property
@@ -144,7 +145,7 @@ class Token(Generic[T]):
             parts.append(f", tags={self.tags}")
         return "".join(parts) + ")"
 
-    def validate(self, instance: Any) -> bool:
+    def validate(self, instance: object) -> bool:
         """Validate instance type against the token's expected type.
 
         Returns False only when ``isinstance(instance, type_)`` is definitively False.

@@ -48,7 +48,10 @@ class Injectable(ABCMeta):
         # Only register if explicitly marked as injectable
         if namespace.get("__injectable__", False):
             token_name = namespace.get("__token_name__", name.lower())
-            scope = namespace.get("__scope__", Scope.TRANSIENT)
+            if not isinstance(token_name, str):
+                token_name = str(token_name)
+            scope_val = namespace.get("__scope__", Scope.TRANSIENT)
+            scope = scope_val if isinstance(scope_val, Scope) else Scope.TRANSIENT
 
             # Create type-safe token
             token = Token(name=token_name, type_=cls)

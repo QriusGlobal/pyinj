@@ -1,7 +1,7 @@
 """Realistic integration tests emulating user projects with async libs.
 
 These tests demonstrate typical project usage of pyinj with httpx and
-SQLAlchemy async. Playwright-style usage is simulated via a fake to avoid
+an async DB client (aiosqlite). Playwright-style usage is simulated via a fake to avoid
 browser downloads while exercising DI patterns and cleanup behavior.
 """
 
@@ -12,12 +12,12 @@ from typing import Any
 
 import pytest
 import httpx
-from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy.sql import text
+import aiosqlite
 
 from pyinj.container import Container
 from pyinj.tokens import Scope, Token
 from pyinj.injection import Inject, inject
+from typing import Annotated
 
 
 def _make_mock_httpx() -> httpx.AsyncClient:
@@ -28,50 +28,46 @@ def _make_mock_httpx() -> httpx.AsyncClient:
 
 
 @pytest.mark.asyncio
-async def test_user_style_project_di_with_httpx_and_sqlalchemy() -> None:
+async def test_user_style_project_di_with_httpx_and_aiosqlite() -> None:
     container = Container()
 
     # Tokens a user would define centrally
     httpx_token = Token("http_client", httpx.AsyncClient, scope=Scope.SINGLETON)
-    engine_token = Token("db_engine", AsyncEngine, scope=Scope.SINGLETON)
-    session_token = Token("db_session", AsyncSession, scope=Scope.REQUEST)
+    db_token = Token("db", aiosqlite.Connection, scope=Scope.REQUEST)
 
     # Providers users would register during app startup
     async def create_http_client() -> httpx.AsyncClient:
         await asyncio.sleep(0)
         return _make_mock_httpx()
 
-    async def create_engine() -> AsyncEngine:
-        eng = create_async_engine("sqlite+aiosqlite:///:memory:")
-        # warmup connect
-        async with eng.begin() as conn:  # pragma: no cover - trivial
-            await conn.execute(text("select 1"))
-        return eng
-
-    async def create_session() -> AsyncSession:
-        engine = await container.aget(engine_token)
-        Session = async_sessionmaker(engine, expire_on_commit=False)
-        return Session()
+    async def create_db() -> aiosqlite.Connection:
+        db = await aiosqlite.connect(":memory:")
+        await db.execute("create table t(x int)")
+        await db.execute("insert into t(x) values (42)")
+        await db.commit()
+        return db
 
     container.register(httpx_token, create_http_client)
-    container.register(engine_token, create_engine)
-    container.register(session_token, create_session)
+    container.register(db_token, create_db)
 
     # User endpoint using @inject
     @inject(container=container)
     async def endpoint(
         user_id: int,
-        client: Inject[httpx.AsyncClient],
-        db: Inject[AsyncSession],
+        client: Annotated[httpx.AsyncClient, Inject()],
+        db: Annotated[aiosqlite.Connection, Inject()],
     ) -> dict[str, Any]:
         r = await client.get(f"/users/{user_id}")
-        rows = (await db.execute(text("select 42 as answer"))).all()
-        return {"status": r.status_code, "path": r.json()["path"], "rows": [dict(row._mapping) for row in rows]}
+        cur = await db.execute("select x from t")
+        rows = await cur.fetchall()
+        return {"status": r.status_code, "path": r.json()["path"], "rows": [{"answer": row[0]} for row in rows]}
 
     # Simulate concurrent requests with isolated scopes
+    from typing import Awaitable, Callable, cast
     async def call(uid: int) -> dict[str, Any]:
         async with container.async_request_scope():
-            return await endpoint(uid)
+            wrapped = cast(Callable[[int], Awaitable[dict[str, Any]]], endpoint)
+            return await wrapped(uid)
 
     results = await asyncio.gather(*(call(i) for i in range(10)))
     assert all(r["status"] == 200 for r in results)
@@ -83,12 +79,8 @@ async def test_user_style_project_di_with_httpx_and_sqlalchemy() -> None:
     c2 = await container.aget(httpx_token)
     assert c1 is c2
 
-    eng1 = await container.aget(engine_token)
-    eng2 = await container.aget(engine_token)
-    assert eng1 is eng2
-
-    # Sessions are request-scoped; outside scope not cached
-    assert container.resolve_from_context(session_token) is None
+    # DB is request-scoped; outside scope not cached
+    assert container.resolve_from_context(db_token) is None
 
     await container.aclose()
 
