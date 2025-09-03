@@ -22,7 +22,7 @@ jobs:
 
       - name: Install project (dev)
         run: |
-          uv sync --dev
+          uv pip install -e .[dev]
 
       - name: Run tests
         run: |
