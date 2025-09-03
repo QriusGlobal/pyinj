@@ -1,6 +1,6 @@
 name: Docs Versioned Release
 
-on:
+'on':
   release:
     types: [published]
 jobs:
