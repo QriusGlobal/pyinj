@@ -2,9 +2,13 @@ name: CI
 
 'on':
   push:
-    branches: [main]
+    branches:
+      - main
+      - 'release/**'
   pull_request:
-    branches: [main]
+    branches:
+      - main
+      - 'release/**'
 
 jobs:
   test:
@@ -12,6 +16,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # For PRs, check out the PR head exactly; for pushes, use the push SHA
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
 
       - name: Setup uv
         uses: astral-sh/setup-uv@v6
