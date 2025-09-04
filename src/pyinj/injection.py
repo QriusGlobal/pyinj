@@ -339,7 +339,7 @@ def resolve_dependencies(
 
 def _to_spec(spec: DependencyRequest) -> _DepSpec:
     if isinstance(spec, Token):
-        return _DepSpec(kind=_DepKind.TOKEN, token=cast(Token[object], spec))
+        return _DepSpec(kind=_DepKind.TOKEN, token=spec)
     if isinstance(spec, Inject):
         return _DepSpec(kind=_DepKind.INJECT, type_=spec.type, provider=spec.provider)
     # else it's a type
@@ -348,7 +348,9 @@ def _to_spec(spec: DependencyRequest) -> _DepSpec:
 
 def _resolve_one(spec: _DepSpec, container: Resolvable[object]) -> object:
     if spec.kind is _DepKind.TOKEN:
-        return container.get(spec.token)
+        token = spec.token
+        assert token is not None
+        return container.get(token)
     if spec.kind is _DepKind.INJECT:
         if spec.provider is not None:
             return spec.provider()
@@ -361,12 +363,14 @@ async def _aresolve_one(spec: _DepSpec, container: Resolvable[object]) -> object
     if spec.kind is _DepKind.TOKEN:
         aget = getattr(container, "aget", None)
         if aget and iscoroutinefunction(aget):
-            return await aget(cast(Token[object], spec.token))
+            token = spec.token
+            assert token is not None
+            return await aget(token)
         # Fallback
         loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(
-            None, container.get, cast(Token[object], spec.token)
-        )
+        token = spec.token
+        assert token is not None
+        return await loop.run_in_executor(None, container.get, token)
     if spec.kind is _DepKind.INJECT:
         if spec.provider is not None:
             if iscoroutinefunction(spec.provider):
