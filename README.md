@@ -9,37 +9,13 @@
 
 ## Project Status
 
-Category: CI/CD
-
-[![CI](https://github.com/QriusGlobal/pyinj/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/QriusGlobal/pyinj/actions/workflows/ci.yml)
-[![Docs Build](https://img.shields.io/badge/docs-build-green?logo=readthedocs&logoColor=white)](https://qriusglobal.github.io/pyinj/)
-[![Release](https://img.shields.io/github/v/release/QriusGlobal/pyinj?display_name=tag&sort=semver)](https://github.com/QriusGlobal/pyinj/releases)
-
-Category: Quality
-
-[![Lint: Ruff](https://img.shields.io/badge/lint-ruff-46a2f1?logo=ruff&logoColor=white)](https://docs.astral.sh/ruff/)
-[![Types: BasedPyright](https://img.shields.io/badge/types-basedpyright-1f6feb?logo=python&logoColor=white)](https://github.com/DetachHead/basedpyright)
-[![Coverage](https://img.shields.io/badge/coverage-tracked-lightgrey)](#)
-
-Category: Package
-
-[![PyPI version](https://img.shields.io/pypi/v/pyinj.svg)](https://pypi.org/project/pyinj/)
-[![Python versions](https://img.shields.io/pypi/pyversions/pyinj.svg)](https://pypi.org/project/pyinj/)
-
-Category: Community
-
-[![Discord](https://img.shields.io/badge/discord-join-grey?logo=discord&logoColor=white)](#)
-[![Matrix](https://img.shields.io/badge/matrix-join-grey?logo=matrix&logoColor=white)](#)
-[![Medium](https://img.shields.io/badge/medium-read-grey?logo=medium&logoColor=white)](#)
-[![Twitter](https://img.shields.io/badge/twitter-follow-grey?logo=twitter&logoColor=white)](#)
-[![Blog](https://img.shields.io/badge/blog-read-grey?logo=blogger&logoColor=white)](#)
-
-Category: Meta
-
-[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Code Style: Ruff](https://img.shields.io/badge/code%20style-ruff-46a2f1?logo=ruff&logoColor=white)](https://docs.astral.sh/ruff/formatter/)
-[![Linting: Ruff](https://img.shields.io/badge/linting-ruff-46a2f1?logo=ruff&logoColor=white)](https://docs.astral.sh/ruff/)
-[![Typing](https://img.shields.io/badge/typing-strict-blue?logo=python&logoColor=white)](#)
+| Project | Status |
+| --- | --- |
+| CI/CD | [![Latest Release](https://img.shields.io/github/v/release/QriusGlobal/pyinj?display_name=tag&sort=semver&label=latest%20release&logo=github)](https://github.com/QriusGlobal/pyinj/releases) [![Tests & Linting](https://github.com/QriusGlobal/pyinj/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/QriusGlobal/pyinj/actions/workflows/ci.yml) [![Docs Build](https://github.com/QriusGlobal/pyinj/actions/workflows/docs.yml/badge.svg?branch=main)](https://github.com/QriusGlobal/pyinj/actions/workflows/docs.yml) |
+| Quality | [![Coverage](https://img.shields.io/badge/coverage-unknown-lightgrey?logo=codecov&logoColor=white)](#) [![Quality Gate](https://img.shields.io/badge/quality%20gate-not%20configured-lightgrey?logo=sonarqube&logoColor=white)](#) [![Maintainability](https://img.shields.io/badge/maintainability-N%2FA-lightgrey)](#) [![Reliability](https://img.shields.io/badge/reliability-N%2FA-lightgrey)](#) [![Security](https://img.shields.io/badge/security-N%2FA-lightgrey)](#) |
+| Package | [![PyPI](https://img.shields.io/pypi/v/pyinj.svg?logo=pypi&label=PyPI)](https://pypi.org/project/pyinj/) [![Python Versions](https://img.shields.io/pypi/pyversions/pyinj.svg?logo=python&logoColor=white)](https://pypi.org/project/pyinj/) |
+| Community | [![Discord](https://img.shields.io/badge/discord-join-grey?logo=discord)](#) [![Matrix](https://img.shields.io/badge/matrix-join-grey?logo=matrix)](#) [![Medium](https://img.shields.io/badge/medium-read-grey?logo=medium)](#) [![X](https://img.shields.io/badge/X-follow-grey?logo=x)](#) [![Blog](https://img.shields.io/badge/blog-read-grey?logo=blogger)](#) |
+| Meta | [![License MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](https://opensource.org/licenses/MIT) [![Typing: strict](https://img.shields.io/badge/typing-strict-blue?logo=python)](#) [![Linting: Ruff](https://img.shields.io/badge/linting-ruff-46a2f1?logo=ruff&logoColor=white)](https://docs.astral.sh/ruff/) [![Code Style: Ruff](https://img.shields.io/badge/code%20style-ruff-46a2f1?logo=ruff&logoColor=white)](https://docs.astral.sh/ruff/formatter/) |
 
 ## Stability
 
