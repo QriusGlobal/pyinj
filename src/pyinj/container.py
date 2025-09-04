@@ -5,6 +5,8 @@ from __future__ import annotations
 import asyncio
 import threading
 from collections import defaultdict, deque
+from dataclasses import dataclass
+from enum import Enum, auto
 import inspect
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
@@ -13,11 +15,12 @@ from contextvars import Token as CtxToken
 from functools import lru_cache
 from itertools import groupby
 from types import MappingProxyType, TracebackType
-from typing import Any, Mapping, TypeVar, cast
+from typing import Any, Mapping, TypeVar, cast, Generic, Awaitable
 
 from .contextual import ContextualContainer
 from .exceptions import (
     AsyncCleanupRequiredError,
+    CleanupContractError,
     CircularDependencyError,
     ResolutionError,
 )
@@ -29,6 +32,17 @@ __all__ = ["Container", "get_default_container", "set_default_container"]
 
 T = TypeVar("T")
 U = TypeVar("U")
+
+class CleanupMode(Enum):
+    NONE = auto()
+    CONTEXT_SYNC = auto()
+    CONTEXT_ASYNC = auto()
+
+
+@dataclass(frozen=True)
+class _Registration(Generic[T]):
+    provider: Callable[[], Any]
+    cleanup: CleanupMode
 
 # Global default container
 _default_container: Container | None = None
@@ -85,6 +99,7 @@ class Container(ContextualContainer):
 
         # Override less-precise base attributes with typed variants
         self._providers: dict[Token[object], ProviderLike[object]] = {}
+        self._registrations: dict[Token[object], _Registration] = {}
         self._token_scopes: dict[Token[object], Scope] = {}
         self._singletons: dict[Token[object], object] = {}
         self._async_locks: dict[Token[object], asyncio.Lock] = {}
@@ -111,13 +126,59 @@ class Container(ContextualContainer):
 
         # Resolution stack is tracked via ContextVar (task-local)
 
+        # Fast type-to-token index for O(1) resolution by type
+        self._type_index: dict[type[object], Token[object]] = {}
+        # Container-level cleanup stacks for singleton context-managed resources
+        self._singleton_cleanup_sync: list[Callable[[], None]] = []
+        self._singleton_cleanup_async: list[Callable[[], Awaitable[None]]] = []
+
+        # Auto-register classes marked with Injectable metaclass (plain DI)
+        self._auto_register()
+
+    def _auto_register(self) -> None:
+        try:
+            from .metaclasses import Injectable  # avoid top-level cycle
+        except Exception:
+            return
+        registry = Injectable.get_registry()
+        for cls, token in registry.items():
+            # Determine scope from class metadata (default TRANSIENT)
+            scope = getattr(cls, "__scope__", Scope.TRANSIENT)
+            # Build provider; resolve constructor deps by type
+            try:
+                from typing import get_type_hints
+
+                hints = get_type_hints(cls.__init__)
+                deps = {k: v for k, v in hints.items() if k not in ("self", "return")}
+            except Exception:
+                deps = {}
+
+            if deps:
+                def make_factory(target_cls=cls, deps_map=deps):
+                    def provider() -> Any:
+                        kwargs: dict[str, Any] = {}
+                        for name, typ in deps_map.items():
+                            kwargs[name] = self.get(typ)
+                        return target_cls(**kwargs)
+                    return provider
+                self.register(token, make_factory(), scope=scope)
+            else:
+                # No deps, construct directly
+                self.register(token, cast(ProviderLike[Any], cls), scope=scope)
+
     # ============= Internal Helpers (Phase 1) =============
 
     def _coerce_to_token(self, spec: Token[U] | type[U]) -> Token[U]:
         if isinstance(spec, Token):
             return spec
         if isinstance(spec, type):
+            found = self._type_index.get(cast(type[object], spec))
+            if found is not None:
+                return cast(Token[U], found)
             for registered in self._providers:
+                if registered.type_ == spec:
+                    return cast(Token[U], registered)
+            for registered in self._singletons:
                 if registered.type_ == spec:
                     return cast(Token[U], registered)
             return Token(spec.__name__, spec)
@@ -170,6 +231,12 @@ class Container(ContextualContainer):
         Example:
             container.register(Token[DB]("db"), create_db, scope=Scope.SINGLETON)
         """
+        # Validate token type
+        if not isinstance(token, (Token, type)):
+            raise TypeError(
+                "Token specification must be a Token or type; strings are not supported"
+            )
+
         # Convert to Token if needed
         if isinstance(token, type):
             token = self.tokens.create(
@@ -188,9 +255,16 @@ class Container(ContextualContainer):
             )
 
         with self._lock:
-            self._providers[cast(Token[object], token)] = cast(
-                ProviderLike[object], provider
+            obj_token = cast(Token[object], token)
+            # Enforce immutable registrations
+            if obj_token in self._providers or obj_token in self._registrations or obj_token in self._singletons:
+                raise ValueError(f"Token '{obj_token.name}' is already registered")
+            self._providers[obj_token] = cast(ProviderLike[object], provider)
+            self._registrations[obj_token] = _Registration(
+                provider=cast(Callable[[], Any], provider), cleanup=CleanupMode.NONE
             )
+            # Update type index
+            self._type_index[obj_token.type_] = obj_token
 
         return self  # Enable chaining
 
@@ -212,23 +286,70 @@ class Container(ContextualContainer):
         """Register a transient-scoped dependency."""
         return self.register(token, provider, scope=Scope.TRANSIENT)
 
+    def register_context(
+        self,
+        token: Token[U] | type[U],
+        cm_provider: Callable[[], Any],
+        *,
+        is_async: bool,
+        scope: Scope | None = None,
+    ) -> "Container":
+        """Register a context-managed dependency.
+
+        The provider must return a context manager (sync) when ``is_async=False``
+        or an async context manager when ``is_async=True``. The container will
+        enter the context on first resolution within the declared scope and exit
+        it during scope cleanup.
+        """
+        # Validate token
+        if not isinstance(token, (Token, type)):
+            raise TypeError(
+                "Token specification must be a Token or type; strings are not supported"
+            )
+        # To token
+        if isinstance(token, type):
+            token = self.tokens.create(token.__name__, token, scope=scope or Scope.TRANSIENT)
+        elif scope is not None:
+            self._token_scopes[cast(Token[object], token)] = scope
+
+        if not callable(cm_provider):
+            raise TypeError("cm_provider must be callable and return a (async) context manager")
+
+        with self._lock:
+            obj_token = cast(Token[object], token)
+            # Enforce immutable registrations
+            if obj_token in self._providers or obj_token in self._registrations or obj_token in self._singletons:
+                raise ValueError(f"Token '{obj_token.name}' is already registered")
+            self._registrations[obj_token] = _Registration(
+                provider=cast(Callable[[], Any], cm_provider),
+                cleanup=CleanupMode.CONTEXT_ASYNC if is_async else CleanupMode.CONTEXT_SYNC,
+            )
+            self._type_index[obj_token.type_] = obj_token
+        return self
+
     def register_value(self, token: Token[U] | type[U], value: U) -> "Container":
         """Register a pre-created value as a singleton."""
         if isinstance(token, type):
             token = self.tokens.singleton(token.__name__, token)
         # token is now a Token[Any]
 
-        # Store directly as singleton
-        self._singletons[cast(Token[object], token)] = value
+        # Store directly as singleton (immutable)
+        obj_token = cast(Token[object], token)
+        if obj_token in self._providers or obj_token in self._registrations or obj_token in self._singletons:
+            raise ValueError(f"Token '{obj_token.name}' is already registered")
+        self._singletons[obj_token] = value
         return self
 
     def override(self, token: Token[U], value: U) -> None:
-        """Override a dependency with a specific value for this container.
+        """Override a dependency for the current concurrent context only.
 
-        Prefer the ``use_overrides`` context manager for scoped overrides
-        in concurrent test scenarios.
+        Uses a ContextVar-backed mapping so overrides are isolated between
+        threads/tasks. Prefer ``use_overrides`` for scoped overrides.
         """
-        self._singletons[cast(Token[object], token)] = value
+        parent = self._overrides.get()
+        merged: dict[Token[object], object] = dict(parent) if parent else {}
+        merged[cast(Token[object], token)] = value
+        self._overrides.set(merged)
 
     # ============= Given Instances (Scala-inspired) =============
 
@@ -289,19 +410,46 @@ class Container(ContextualContainer):
     def _obj_token(self, token: Token[U]) -> Token[object]:
         return cast(Token[object], token)
 
+    def _canonicalize(self, token: Token[U]) -> Token[U]:
+        """Return the registered token that matches by name and type (ignore scope).
+
+        This allows callers to construct a token with the same name/type but different
+        scope and still resolve the registered binding.
+        """
+        obj_token = self._obj_token(token)
+        if obj_token in self._providers or obj_token in self._singletons:
+            return token
+        # Search providers first
+        for t in self._providers.keys():
+            if t.name == token.name and t.type_ == token.type_:
+                return cast(Token[U], t)
+        # Then singletons
+        for t in self._singletons.keys():
+            if t.name == token.name and t.type_ == token.type_:
+                return cast(Token[U], t)
+        return token
+
     def _get_provider(self, token: Token[U]) -> ProviderLike[U]:
+        token = self._canonicalize(token)
         obj_token = self._obj_token(token)
         provider = self._providers.get(obj_token)
         if provider is None:
             raise ResolutionError(
-                token, [], f"No provider registered for token '{token.name}'"
+                token,
+                [],
+                (
+                    f"No provider registered for token '{token.name}'. "
+                    f"Fix: register a provider for this token before resolving."
+                ),
             )
         return cast(ProviderLike[U], provider)
 
     def _get_scope(self, token: Token[U]) -> Scope:
+        token = self._canonicalize(token)
         return self._token_scopes.get(self._obj_token(token), token.scope)
 
     def _get_singleton_cached(self, token: Token[U]) -> U | None:
+        token = self._canonicalize(token)
         obj_token = self._obj_token(token)
         if obj_token in self._singletons:
             return cast(U, self._singletons[obj_token])
@@ -336,6 +484,7 @@ class Container(ContextualContainer):
             if given is not None:
                 return given
         token = self._coerce_to_token(token)
+        token = self._canonicalize(token)
 
         # Check per-context overrides first
         override = self._get_override(token)
@@ -343,7 +492,7 @@ class Container(ContextualContainer):
             self._cache_hits += 1
             return override
 
-        # Check context first
+        # Check context first (for request/session stored instances)
         instance = self.resolve_from_context(token)
         if instance is not None:
             self._cache_hits += 1
@@ -352,8 +501,44 @@ class Container(ContextualContainer):
         self._cache_misses += 1
 
         with self._resolution_guard(token):
-            provider = self._get_provider(token)
+            obj_token = cast(Token[object], token)
+            reg = self._registrations.get(obj_token)
             effective_scope = self._get_scope(token)
+            if reg and reg.cleanup is CleanupMode.CONTEXT_ASYNC:
+                # cannot enter async context in sync path
+                raise ResolutionError(
+                    token,
+                    [],
+                    "Context-managed provider is async; Use aget() for async providers",
+                )
+            if reg and reg.cleanup is CleanupMode.CONTEXT_SYNC:
+                # handle context-managed sync
+                if effective_scope == Scope.SINGLETON:
+                    with self._singleton_locks[self._obj_token(token)]:
+                        cached = self._get_singleton_cached(token)
+                        if cached is not None:
+                            return cached
+                        cm = reg.provider()
+                        value = cm.__enter__()
+                        self._set_singleton_cached(token, value)
+                        # schedule cleanup
+                        self._singleton_cleanup_sync.append(lambda cm=cm: cm.__exit__(None, None, None))
+                        self._resources.append(value)
+                        return cast(U, value)
+                else:
+                    cm = reg.provider()
+                    value = cm.__enter__()
+                    self.store_in_context(token, value)
+                    # register per-scope cleanup
+                    if effective_scope == Scope.REQUEST:
+                        self._register_request_cleanup_sync(lambda cm=cm: cm.__exit__(None, None, None))
+                    elif effective_scope == Scope.SESSION:
+                        self._register_session_cleanup_sync(lambda cm=cm: cm.__exit__(None, None, None))
+                    self._resources.append(value)
+                    return cast(U, value)
+
+            provider = self._get_provider(token)
+            # legacy non-context providers
             if effective_scope == Scope.SINGLETON:
                 with self._singleton_locks[self._obj_token(token)]:
                     cached = self._get_singleton_cached(token)
@@ -363,7 +548,7 @@ class Container(ContextualContainer):
                         raise ResolutionError(
                             token,
                             [],
-                            "Provider is async; use aget() for async providers",
+                            "Provider is async; Use aget() for async providers",
                         )
                     instance = cast(ProviderSync[U], provider)()
                     self._validate_and_track(token, instance)
@@ -374,11 +559,13 @@ class Container(ContextualContainer):
                     raise ResolutionError(
                         token,
                         [],
-                        "Provider is async; use aget() for async providers",
+                        "Provider is async; Use aget() for async providers",
                     )
                 instance = cast(ProviderSync[U], provider)()
                 self._validate_and_track(token, instance)
-                self.store_in_context(token, instance)
+                # Only store in context for REQUEST/SESSION
+                if effective_scope in (Scope.REQUEST, Scope.SESSION):
+                    self.store_in_context(token, instance)
                 return instance
 
     async def aget(self, token: Token[U] | type[U]) -> U:
@@ -393,6 +580,7 @@ class Container(ContextualContainer):
             if given is not None:
                 return given
         token = self._coerce_to_token(token)
+        token = self._canonicalize(token)
 
         # Check per-context overrides first
         override = self._get_override(token)
@@ -409,8 +597,35 @@ class Container(ContextualContainer):
         self._cache_misses += 1
 
         with self._resolution_guard(token):
-            provider = self._get_provider(token)
+            obj_token = cast(Token[object], token)
+            reg = self._registrations.get(obj_token)
             effective_scope = self._get_scope(token)
+            if reg and reg.cleanup is CleanupMode.CONTEXT_ASYNC:
+                if effective_scope == Scope.SINGLETON:
+                    lock = self._ensure_async_lock(token)
+                    async with lock:
+                        cached = self._get_singleton_cached(token)
+                        if cached is not None:
+                            return cached
+                        cm = reg.provider()
+                        value = await cm.__aenter__()
+                        self._set_singleton_cached(token, value)
+                        self._singleton_cleanup_async.append(lambda cm=cm: cm.__aexit__(None, None, None))
+                        self._resources.append(value)
+                        return cast(U, value)
+                else:
+                    cm = reg.provider()
+                    value = await cm.__aenter__()
+                    self.store_in_context(token, value)
+                    if effective_scope == Scope.REQUEST:
+                        self._register_request_cleanup_async(lambda cm=cm: cm.__aexit__(None, None, None))
+                    elif effective_scope == Scope.SESSION:
+                        self._register_session_cleanup_async(lambda cm=cm: cm.__aexit__(None, None, None))
+                    self._resources.append(value)
+                    return cast(U, value)
+
+            # fallback legacy providers
+            provider = self._get_provider(token)
             if effective_scope == Scope.SINGLETON:
                 lock = self._ensure_async_lock(token)
                 async with lock:
@@ -431,8 +646,8 @@ class Container(ContextualContainer):
                 else:
                     instance = cast(ProviderSync[U], provider)()
                 self._validate_and_track(token, instance)
-
-                self.store_in_context(token, instance)
+                if effective_scope in (Scope.REQUEST, Scope.SESSION):
+                    self.store_in_context(token, instance)
                 return instance
 
     # ============= Batch Operations =============
@@ -501,6 +716,22 @@ class Container(ContextualContainer):
         """Return a read-only snapshot of tracked resources for tests/inspection."""
         return tuple(self._resources)
 
+    # ============= Decorator Alias =============
+
+    def inject(
+        self, func: Callable[..., Any] | None = None, *, cache: bool = True
+    ) -> Callable[..., Any]:
+        """Alias to pyinj.injection.inject bound to this container.
+
+        Enables ``@container.inject`` usage in addition to
+        ``@inject(container=container)``.
+        """
+        from .injection import inject as _inject
+
+        if func is None:
+            return _inject(container=self, cache=cache)
+        return _inject(func, container=self, cache=cache)
+
     def has(self, token: Token[Any] | type[Any]) -> bool:
         """Return True if the token/type is known to the container."""
         if isinstance(token, type):
@@ -511,9 +742,8 @@ class Container(ContextualContainer):
         return obj_token in self._providers or obj_token in self._singletons
 
     def clear(self) -> None:
-        """Clear providers, caches, and statistics. Does not affect docs or code."""
+        """Clear caches and statistics; keep provider registrations intact."""
         with self._lock:
-            self._providers.clear()
             self._singletons.clear()
             self._transients.clear()
             self._given_providers.clear()
@@ -542,27 +772,17 @@ class Container(ContextualContainer):
         exc_val: BaseException | None,
         exc_tb: TracebackType | None,
     ) -> None:  # pragma: no cover - trivial
-        for resource in reversed(self._resources):
+        # If any async singleton cleanups are registered, fail fast in sync context
+        if self._singleton_cleanup_async:
+            raise AsyncCleanupRequiredError(
+                "singleton",
+                "Use 'await container.aclose()' or an async scope.",
+            )
+        # Run sync cleanups for singletons (LIFO)
+        for fn in reversed(self._singleton_cleanup_sync):
             try:
-                # If resource exposes async cleanup, fail fast in sync context
-                if hasattr(resource, "aclose") or hasattr(resource, "__aexit__"):
-                    raise AsyncCleanupRequiredError(
-                        type(resource).__name__,
-                        "Use 'await container.aclose()' or an async scope.",
-                    )
-                close = getattr(resource, "close", None)
-                if close is not None and inspect.iscoroutinefunction(close):
-                    raise AsyncCleanupRequiredError(
-                        type(resource).__name__,
-                        "Use 'await container.aclose()' or an async scope.",
-                    )
-                if close is not None:
-                    close()
-            except AsyncCleanupRequiredError:
-                # propagate circuit breaker
-                raise
+                fn()
             except Exception:
-                # ignore best-effort cleanup errors
                 pass
 
     async def __aenter__(self) -> Container:  # pragma: no cover - trivial
@@ -574,25 +794,16 @@ class Container(ContextualContainer):
         exc_val: BaseException | None,
         exc_tb: TracebackType | None,
     ) -> None:  # pragma: no cover - trivial
-        tasks: list[asyncio.Future[None] | asyncio.Task[None]] = []
-        loop = asyncio.get_running_loop()
-        for resource in reversed(self._resources):
-            aclose = getattr(resource, "aclose", None)
-            if aclose and inspect.iscoroutinefunction(aclose):
-                tasks.append(asyncio.create_task(aclose()))
-                continue
-            aexit = getattr(resource, "__aexit__", None)
-            if aexit and inspect.iscoroutinefunction(aexit):
-                tasks.append(asyncio.create_task(aexit(None, None, None)))
-                continue
-            close = getattr(resource, "close", None)
-            if close:
-                if inspect.iscoroutinefunction(close):
-                    tasks.append(asyncio.create_task(close()))
-                else:
-                    tasks.append(loop.run_in_executor(None, close))
-        if tasks:
+        # Run async cleanups for singletons (LIFO)
+        if self._singleton_cleanup_async:
+            tasks = [fn() for fn in reversed(self._singleton_cleanup_async)]
             await asyncio.gather(*tasks, return_exceptions=True)
+        # Run sync cleanups too
+        for fn in reversed(self._singleton_cleanup_sync):
+            try:
+                fn()
+            except Exception:
+                pass
 
     async def aclose(self) -> None:
         """Async close: close tracked resources and clear caches."""
@@ -635,11 +846,4 @@ class Container(ContextualContainer):
             raise TypeError(
                 f"Provider for token '{token.name}' returned {type(instance).__name__}, expected {token.type_.__name__}"
             )
-        # Track cleanable resources broadly (protocols or common cleanup methods)
-        if (
-            isinstance(instance, (SupportsClose, SupportsAsyncClose))
-            or hasattr(instance, "aclose")
-            or hasattr(instance, "__aexit__")
-            or hasattr(instance, "close")
-        ):
-            self._resources.append(instance)
+        # Introspective tracking removed; only context-managed registrations add resources.

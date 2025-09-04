@@ -6,6 +6,7 @@ import asyncio
 from collections import ChainMap
 import inspect
 from collections.abc import AsyncIterator, Iterator
+from typing import Awaitable, Callable
 from contextlib import asynccontextmanager, contextmanager
 from contextvars import ContextVar
 from contextvars import Token as ContextToken
@@ -35,6 +36,21 @@ _context_stack: ContextVar[ChainMap[Token[object], object] | None] = ContextVar(
 _session_context: ContextVar[dict[Token[object], object] | None] = ContextVar(
     "pyinj_session_context", default=None
 )
+
+# Per-scope explicit cleanup stacks (registered via container.register_context)
+_request_cleanup_sync: ContextVar[list[Callable[[], None]] | None] = ContextVar(
+    "pyinj_request_cleanup_sync", default=None
+)
+_request_cleanup_async: ContextVar[
+    list[Callable[[], Awaitable[None]]] | None
+] = ContextVar("pyinj_request_cleanup_async", default=None)
+
+_session_cleanup_sync: ContextVar[list[Callable[[], None]] | None] = ContextVar(
+    "pyinj_session_cleanup_sync", default=None
+)
+_session_cleanup_async: ContextVar[
+    list[Callable[[], Awaitable[None]]] | None
+] = ContextVar("pyinj_session_cleanup_async", default=None)
 
 
 def get_current_context() -> ChainMap[Token[object], object] | None:
@@ -88,6 +104,36 @@ class ContextualContainer:
         # Scope manager (RAII contexts, precedence enforcement)
         self._scope_manager = ScopeManager(self)
 
+    # ---- Registration of per-scope cleanup operations (used by Container) ----
+
+    def _register_request_cleanup_sync(self, fn: Callable[[], None]) -> None:
+        stack = _request_cleanup_sync.get()
+        if stack is None:
+            raise RuntimeError("No active request scope for registering cleanup")
+        stack.append(fn)
+
+    def _register_request_cleanup_async(
+        self, fn: Callable[[], Awaitable[None]]
+    ) -> None:
+        stack = _request_cleanup_async.get()
+        if stack is None:
+            raise RuntimeError("No active request scope for registering async cleanup")
+        stack.append(fn)
+
+    def _register_session_cleanup_sync(self, fn: Callable[[], None]) -> None:
+        stack = _session_cleanup_sync.get()
+        if stack is None:
+            raise RuntimeError("No active session scope for registering cleanup")
+        stack.append(fn)
+
+    def _register_session_cleanup_async(
+        self, fn: Callable[[], Awaitable[None]]
+    ) -> None:
+        stack = _session_cleanup_async.get()
+        if stack is None:
+            raise RuntimeError("No active session scope for registering async cleanup")
+        stack.append(fn)
+
     def _put_in_current_request_cache(self, token: Token[T], instance: T) -> None:
         """Insert a value into the current request cache unconditionally.
 
@@ -95,7 +141,7 @@ class ContextualContainer:
         that should only affect the current context.
         """
         context = _context_stack.get()
-        if context and hasattr(context, "maps") and context.maps:
+        if context is not None and hasattr(context, "maps") and len(context.maps) > 0:
             # The top-most map holds request-local values
             context.maps[0][cast(Token[object], token)] = cast(object, instance)
 
@@ -145,7 +191,15 @@ class ContextualContainer:
         for resource in reversed(list(cache.values())):
             try:
                 # Early fail if async cleanup is required in a sync context
-                if hasattr(resource, "aclose") or hasattr(resource, "__aexit__"):
+                aclose = getattr(resource, "aclose", None)
+                aexit = getattr(resource, "__aexit__", None)
+                supports_sync = hasattr(resource, "close") or hasattr(
+                    resource, "__exit__"
+                )
+                if (
+                    (aclose and inspect.iscoroutinefunction(aclose))
+                    or (aexit and inspect.iscoroutinefunction(aexit))
+                ) and not supports_sync:
                     raise AsyncCleanupRequiredError(
                         type(resource).__name__,
                         "Use an async request/session scope.",
@@ -156,10 +210,11 @@ class ContextualContainer:
                         type(resource).__name__,
                         "Use an async request/session scope.",
                     )
-                if close is not None:
-                    close()
-                elif hasattr(resource, "__exit__"):
+                # Prefer context-manager exit over ad-hoc close for sync path
+                if hasattr(resource, "__exit__"):
                     resource.__exit__(None, None, None)
+                elif close is not None:
+                    close()
             except AsyncCleanupRequiredError:
                 raise
             except Exception:
@@ -178,13 +233,17 @@ class ContextualContainer:
 
         for resource in reversed(list(cache.values())):
             aclose = getattr(resource, "aclose", None)
-            if aclose and inspect.iscoroutinefunction(aclose):
-                tasks.append(aclose())
-                continue
+            if aclose and callable(aclose):
+                res = aclose()
+                if inspect.isawaitable(res):
+                    tasks.append(res)
+                    continue
             aexit = getattr(resource, "__aexit__", None)
-            if aexit and inspect.iscoroutinefunction(aexit):
-                tasks.append(aexit(None, None, None))
-                continue
+            if aexit and callable(aexit):
+                res = aexit(None, None, None)
+                if inspect.isawaitable(res):
+                    tasks.append(res)
+                    continue
             close = getattr(resource, "close", None)
             if close:
                 if inspect.iscoroutinefunction(close):
@@ -247,12 +306,27 @@ class ScopeManager:
         if current is None:
             new_context = ChainMap(request_cache, self._container._singletons)
         else:
-            new_context = ChainMap(request_cache, current)
+            new_context = ChainMap(request_cache, *current.maps)
         token = _context_stack.set(new_context)
+        # Initialize per-request cleanup stacks
+        req_sync_token = _request_cleanup_sync.set([])
+        req_async_token = _request_cleanup_async.set([])
         try:
             yield
         finally:
+            # Cleanup resources stored via context introspection (legacy path)
             self._container._cleanup_scope(request_cache)
+            # Run explicit per-request cleanup stacks (LIFO)
+            try:
+                sync_fns = _request_cleanup_sync.get() or []
+                for fn in reversed(sync_fns):
+                    try:
+                        fn()
+                    except Exception:
+                        pass
+            finally:
+                _request_cleanup_sync.reset(req_sync_token)
+            _request_cleanup_async.reset(req_async_token)
             _context_stack.reset(token)
 
     @asynccontextmanager
@@ -262,12 +336,31 @@ class ScopeManager:
         if current is None:
             new_context = ChainMap(request_cache, self._container._singletons)
         else:
-            new_context = ChainMap(request_cache, current)
+            new_context = ChainMap(request_cache, *current.maps)
         token = _context_stack.set(new_context)
+        # Initialize per-request cleanup stacks
+        req_sync_token = _request_cleanup_sync.set([])
+        req_async_token = _request_cleanup_async.set([])
         try:
             yield
         finally:
+            # Async cleanup for resources stored via context introspection
             await self._container._async_cleanup_scope(request_cache)
+            # Then run explicit per-request async cleanups (LIFO)
+            async_fns = _request_cleanup_async.get() or []
+            if async_fns:
+                await asyncio.gather(
+                    *[fn() for fn in reversed(async_fns)], return_exceptions=True
+                )
+            # Finally run any sync cleanups
+            sync_fns = _request_cleanup_sync.get() or []
+            for fn in reversed(sync_fns):
+                try:
+                    fn()
+                except Exception:
+                    pass
+            _request_cleanup_sync.reset(req_sync_token)
+            _request_cleanup_async.reset(req_async_token)
             _context_stack.reset(token)
 
     @contextmanager
@@ -276,9 +369,14 @@ class ScopeManager:
         if existing is None:
             session_cache: dict[Token[object], object] = {}
             session_token = _session_context.set(session_cache)
+            # Only create new cleanup stacks when opening a new session
+            sess_sync_token = _session_cleanup_sync.set([])
+            sess_async_token = _session_cleanup_async.set([])
         else:
             session_cache = existing
             session_token = None
+            sess_sync_token = None
+            sess_async_token = None
         current = _context_stack.get()
         if current is None:
             new_context = ChainMap(session_cache, self._container._singletons)
@@ -292,12 +390,27 @@ class ScopeManager:
         finally:
             _context_stack.reset(context_token)
             if session_token:
+                # Run explicit per-session cleanup stacks (LIFO) when session ends
+                try:
+                    sync_fns = _session_cleanup_sync.get() or []
+                    for fn in reversed(sync_fns):
+                        try:
+                            fn()
+                        except Exception:
+                            pass
+                finally:
+                    if sess_sync_token is not None:
+                        _session_cleanup_sync.reset(sess_sync_token)
+                if sess_async_token is not None:
+                    _session_cleanup_async.reset(sess_async_token)
                 _session_context.reset(session_token)
 
     def resolve_from_context(self, token: Token[T]) -> T | None:
         context = _context_stack.get()
-        if context and token in context:
-            return cast(T, context[cast(Token[object], token)])
+        if context is not None:
+            key = cast(Token[object], token)
+            if key in context:
+                return cast(T, context[key])
         if token.scope == Scope.SESSION:
             session = _session_context.get()
             if session and token in session:
@@ -329,7 +442,7 @@ class ScopeManager:
 
     def clear_request_context(self) -> None:
         context = _context_stack.get()
-        if context and hasattr(context, "maps") and context.maps:
+        if context is not None and hasattr(context, "maps") and len(context.maps) > 0:
             context.maps[0].clear()
 
     def clear_session_context(self) -> None:

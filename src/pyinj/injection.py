@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from enum import Enum, auto
 from functools import lru_cache, wraps
 from inspect import Parameter, iscoroutinefunction, signature
+import inspect
 from typing import (
     Annotated,
     Any,
@@ -359,8 +360,9 @@ def _resolve_one(spec: _DepSpec, container: Resolvable[object]) -> object:
 
 async def _aresolve_one(spec: _DepSpec, container: Resolvable[object]) -> object:
     if spec.kind is _DepKind.TOKEN:
-        if hasattr(container, "aget"):
-            return await container.aget(cast(Token[object], spec.token))
+        aget = getattr(container, "aget", None)
+        if aget and iscoroutinefunction(aget):
+            return await aget(cast(Token[object], spec.token))
         # Fallback
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(
@@ -375,15 +377,17 @@ async def _aresolve_one(spec: _DepSpec, container: Resolvable[object]) -> object
             if asyncio.iscoroutine(result):
                 return await cast(asyncio.Future[object], result)
             return result
-        if hasattr(container, "aget"):
-            return await container.aget(cast(type[Any], spec.type_))
+        aget = getattr(container, "aget", None)
+        if aget and iscoroutinefunction(aget):
+            return await aget(cast(type[Any], spec.type_))
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(
             None, container.get, cast(type[Any], spec.type_)
         )
     # TYPE
-    if hasattr(container, "aget"):
-        return await container.aget(cast(type[Any], spec.type_))
+    aget = getattr(container, "aget", None)
+    if aget and iscoroutinefunction(aget):
+        return await aget(cast(type[Any], spec.type_))
     loop = asyncio.get_event_loop()
     return await loop.run_in_executor(None, container.get, cast(type[Any], spec.type_))
 
@@ -496,10 +500,9 @@ def inject(
                 # Get container
                 nonlocal container
                 if container is None:
-                    # Try to get default container without import cycle
-                    from .container import get_default_container
-
-                    container = tcast(Resolvable[Any], get_default_container())
+                    # Try to get default container via indirection (patchable)
+                    from .injection import get_default_container as _gdc
+                    container = tcast(Resolvable[Any], _gdc())
 
                 # Extract overrides from kwargs
                 overrides: dict[str, Any] = {}
@@ -510,10 +513,23 @@ def inject(
                 # Resolve dependencies
                 resolved = await resolve_dependencies_async(deps, container, overrides)
 
-                # Merge with kwargs
-                kwargs.update(resolved)
+                # Rebind arguments: skip injected params from positional binding
+                sig = signature(fn)
+                new_kwargs: dict[str, Any] = {}
+                arg_i = 0
+                for pname, param in sig.parameters.items():
+                    if pname in resolved:
+                        # will be injected
+                        continue
+                    if param.kind in (Parameter.POSITIONAL_ONLY, Parameter.POSITIONAL_OR_KEYWORD) and arg_i < len(args):
+                        new_kwargs[pname] = args[arg_i]
+                        arg_i += 1
+                # bring through any explicit kwargs provided
+                new_kwargs.update(kwargs)
+                # inject resolved deps
+                new_kwargs.update(resolved)
 
-                return await fn(*args, **kwargs)
+                return await fn(**new_kwargs)
 
             return tcast(Callable[P, R], async_wrapper)
 
@@ -533,9 +549,8 @@ def inject(
                 # Get container
                 nonlocal container
                 if container is None:
-                    from .container import get_default_container
-
-                    container = tcast(Resolvable[Any], get_default_container())
+                    from .injection import get_default_container as _gdc
+                    container = tcast(Resolvable[Any], _gdc())
 
                 # Extract overrides from kwargs
                 overrides: dict[str, Any] = {}
@@ -546,10 +561,20 @@ def inject(
                 # Resolve dependencies
                 resolved = resolve_dependencies(deps, container, overrides)
 
-                # Merge with kwargs
-                kwargs.update(resolved)
+                # Rebind arguments: skip injected params from positional binding
+                sig = signature(fn)
+                new_kwargs: dict[str, Any] = {}
+                arg_i = 0
+                for pname, param in sig.parameters.items():
+                    if pname in resolved:
+                        continue
+                    if param.kind in (Parameter.POSITIONAL_ONLY, Parameter.POSITIONAL_OR_KEYWORD) and arg_i < len(args):
+                        new_kwargs[pname] = args[arg_i]
+                        arg_i += 1
+                new_kwargs.update(kwargs)
+                new_kwargs.update(resolved)
 
-                return fn(*args, **kwargs)
+                return fn(**new_kwargs)
 
             return tcast(Callable[P, R], sync_wrapper)
 
@@ -560,3 +585,8 @@ def inject(
     else:
         # Called without parameters: @inject
         return decorator(func)
+def get_default_container() -> Resolvable[Any]:
+    """Indirection for default container lookup (patchable in tests)."""
+    from .container import get_default_container as _gdc
+
+    return tcast(Resolvable[Any], _gdc())

@@ -165,14 +165,20 @@ class TestAsyncCleanup:
     async def test_async_resource_tracking(self):
         """Test that async resources are tracked for cleanup."""
         container = Container()
+        from contextlib import asynccontextmanager
         token = Token("async_resource", MockAsyncResource)
 
-        def create_resource() -> MockAsyncResource:
-            return MockAsyncResource()
+        @asynccontextmanager
+        async def cm():
+            r = MockAsyncResource()
+            try:
+                yield r
+            finally:
+                await r.aclose()
 
-        container.register(token, create_resource, Scope.SINGLETON)
+        container.register_context(token, lambda: cm(), is_async=True, scope=Scope.SINGLETON)
 
-        resource: MockAsyncResource = container.get(token)
+        resource: MockAsyncResource = await container.aget(token)
         assert not resource.closed
 
         # Dispose should close the resource
@@ -192,10 +198,18 @@ class TestAsyncCleanup:
             return resource
 
         # Register multiple singleton resources
+        from contextlib import asynccontextmanager
         for i in range(3):
             token = Token(f"resource_{i}", MockAsyncResource)
-            container.register(token, create_resource, Scope.SINGLETON)
-            container.get(token)  # Create the resources
+            @asynccontextmanager
+            async def cm():
+                r = create_resource()
+                try:
+                    yield r
+                finally:
+                    await r.aclose()
+            container.register_context(token, lambda cm=cm: cm(), is_async=True, scope=Scope.SINGLETON)
+            _ = await container.aget(token)
 
         # All should be open
         assert len(resources_created) == 3
@@ -221,10 +235,19 @@ class TestAsyncCleanup:
                 raise RuntimeError("Cleanup error!")
 
         container = Container()
+        from contextlib import asynccontextmanager
         token = Token("problematic", ProblematicResource)
 
-        container.register(token, ProblematicResource, Scope.SINGLETON)
-        resource: ProblematicResource = container.get(token)
+        @asynccontextmanager
+        async def cm():
+            r = ProblematicResource()
+            try:
+                yield r
+            finally:
+                await r.aclose()
+
+        container.register_context(token, lambda: cm(), is_async=True, scope=Scope.SINGLETON)
+        resource: ProblematicResource = await container.aget(token)
 
         # Dispose should not raise even if cleanup fails
         await container.dispose()
@@ -236,20 +259,23 @@ class TestAsyncCleanup:
     async def test_dispose_clears_state(self):
         """Test that dispose clears container state."""
         container = Container()
-        token = Token("test", str)
+        class Thing:
+            pass
 
-        container.register(token, lambda: "test", Scope.SINGLETON)
+        token = Token("test", Thing)
+
+        container.register(token, lambda: Thing(), Scope.SINGLETON)
 
         # Create singleton
         result1 = container.get(token)
-        assert result1 == "test"
+        assert isinstance(result1, Thing)
 
         # Dispose
         await container.dispose()
 
         # Singleton should be recreated
-        result2: str = container.get(token)
-        assert result2 == "test"
+        result2: Thing = container.get(token)
+        assert isinstance(result2, Thing)
         assert result1 is not result2  # Different instance after dispose
 
 

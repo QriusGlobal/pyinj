@@ -151,8 +151,19 @@ from pyinj.exceptions import AsyncCleanupRequiredError
 from httpx import AsyncClient
 
 container = Container()
-client_token = Token[AsyncClient]("client")
-container.register(client_token, AsyncClient, Scope.SINGLETON)
+client_token = Token[AsyncClient]("client", scope=Scope.SINGLETON)
+
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def client_cm():
+    client = AsyncClient()
+    try:
+        yield client
+    finally:
+        await client.aclose()
+
+container.register_context(client_token, lambda: client_cm(), is_async=True)
 _ = await container.aget(client_token)
 
 # This will raise AsyncCleanupRequiredError
@@ -166,8 +177,9 @@ except AsyncCleanupRequiredError:
 await container.aclose()
 ```
 
-The container and contexts track resources broadly (via `aclose`, `__aexit__`,
-or `close`) and close them in LIFO order.
+Container-level cleanup manages resources registered via `register_context(...)` and
+closes them in LIFO order. Request/session scopes also clean up resources stored
+in the scope when the scope exits.
 ```
 
 ### 4. Testing Made Easy

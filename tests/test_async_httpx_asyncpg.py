@@ -13,6 +13,7 @@ from typing import Any
 import httpx
 import pytest
 
+from contextlib import asynccontextmanager
 from pyinj.container import Container
 from pyinj.tokens import Scope, Token
 
@@ -94,11 +95,16 @@ async def test_fake_asyncpg_pool_singleton_and_cleanup() -> None:
     container = Container()
     pool_token = Token("db_pool", FakeAsyncPGPool, scope=Scope.SINGLETON)
 
-    async def create_pool() -> FakeAsyncPGPool:
+    @asynccontextmanager
+    async def pool_cm():
         await asyncio.sleep(0.001)
-        return FakeAsyncPGPool()
+        p = FakeAsyncPGPool()
+        try:
+            yield p
+        finally:
+            await p.aclose()
 
-    container.register(pool_token, create_pool)
+    container.register_context(pool_token, lambda: pool_cm(), is_async=True)
 
     # Concurrency: ensure only one pool is created
     pools = await asyncio.gather(*(container.aget(pool_token) for _ in range(20)))

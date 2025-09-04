@@ -176,23 +176,25 @@ class TestThreadSafety:
             def close(self):
                 self.closed = True
 
-        # Make it support the protocol
-        CloseableResource.__class__ = type(
-            "CloseableResource", (CloseableResource, SupportsClose), {}
-        )
+        # Use explicit context-managed registration in tests instead of runtime mutation
 
         container = Container()
         resources_created: list[CloseableResource] = []
 
         def create_and_get_resource(resource_id: str) -> CloseableResource:
             token = Token(f"resource_{resource_id}", CloseableResource)
+            from contextlib import contextmanager
 
-            def provider() -> CloseableResource:
+            @contextmanager
+            def cm():
                 resource = CloseableResource(resource_id)
                 resources_created.append(resource)
-                return resource
+                try:
+                    yield resource
+                finally:
+                    resource.close()
 
-            container.register(token, provider, Scope.SINGLETON)
+            container.register_context(token, lambda cm=cm: cm(), is_async=False, scope=Scope.SINGLETON)
             return container.get(token)
 
         # Create resources concurrently
@@ -276,12 +278,11 @@ class TestThreadSafety:
                     result = container.get(tok2)
                     assert result[1] == "transient"
 
-                    # Test overrides
+                    # Test overrides (scoped per-thread)
                     override_token: Token[Any] = Token("singleton_0", dict)
-                    _ = container.get(override_token)
-                    container.override(override_token, {"overridden": True})
-                    overridden = container.get(override_token)
-                    assert overridden["overridden"] is True
+                    with container.use_overrides({override_token: {"overridden": True}}):
+                        overridden = container.get(override_token)
+                        assert overridden["overridden"] is True
 
                 operations_completed.append(worker_id)
             except Exception as e:

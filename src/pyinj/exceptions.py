@@ -14,6 +14,7 @@ __all__ = [
     "PyInjError",
     "ResolutionError",
     "AsyncCleanupRequiredError",
+    "CleanupContractError",
 ]
 
 
@@ -74,3 +75,10 @@ class AsyncCleanupRequiredError(PyInjError):
         super().__init__(
             f"Resource {resource_type} requires asynchronous cleanup. {advice}"
         )
+
+
+class CleanupContractError(PyInjError):
+    """Raised when a registration declares an invalid or inconsistent cleanup contract."""
+
+    def __init__(self, message: str) -> None:
+        super().__init__(message)

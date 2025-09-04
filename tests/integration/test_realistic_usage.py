@@ -13,6 +13,7 @@ from typing import Annotated, Any
 import httpx
 import pytest
 
+from contextlib import asynccontextmanager
 from pyinj.container import Container
 from pyinj.injection import Inject, inject
 from pyinj.tokens import Scope, Token
@@ -89,11 +90,15 @@ async def test_playwright_style_fake_browser_with_cleanup() -> None:
 
     browser_token = Token("browser", FakeBrowser, scope=Scope.SINGLETON)
 
-    async def create_browser() -> FakeBrowser:
-        await asyncio.sleep(0)
-        return FakeBrowser()
+    @asynccontextmanager
+    async def browser_cm():
+        b = FakeBrowser()
+        try:
+            yield b
+        finally:
+            await b.aclose()
 
-    container.register(browser_token, create_browser)
+    container.register_context(browser_token, lambda: browser_cm(), is_async=True)
 
     # Emulate concurrent test runners using the container
     async def worker(i: int) -> bool:
@@ -120,10 +125,15 @@ async def test_sync_cleanup_circuit_breaker_raises_for_async_resources() -> None
 
     httpx_token = Token("http_client", httpx.AsyncClient, scope=Scope.SINGLETON)
 
-    async def create_http_client() -> httpx.AsyncClient:
-        return _make_mock_httpx()
+    @asynccontextmanager
+    async def client_cm():
+        client = _make_mock_httpx()
+        try:
+            yield client
+        finally:
+            await client.aclose()
 
-    container.register(httpx_token, create_http_client)
+    container.register_context(httpx_token, lambda: client_cm(), is_async=True)
 
     # Create the async client (tracked resource)
     _ = await container.aget(httpx_token)

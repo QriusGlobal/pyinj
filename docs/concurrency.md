@@ -93,9 +93,24 @@ assert container.get(LOGGER) != "fake"
 
 ## Cleanup
 
-Any object that implements `close()` or `aclose()` is tracked and cleaned up by `dispose()` / `aclose()`.
+- Request/session scopes clean up resources stored in the scope when the scope exits.
+- Container-level `dispose()` / `aclose()` cleans up resources registered via `register_context(...)` (both sync and async).
 
 ```python
-await container.dispose()  # closes async resources and clears caches
-```
+# Register a context-managed singleton (async)
+from contextlib import asynccontextmanager
 
+@asynccontextmanager
+async def client_cm():
+    c = make_async_client()
+    try:
+        yield c
+    finally:
+        await c.aclose()
+
+CLIENT = Token[AsyncClient]("client", scope=Scope.SINGLETON)
+container.register_context(CLIENT, lambda: client_cm(), is_async=True)
+
+# Later, ensure cleanup runs
+await container.aclose()  # or await container.dispose()
+```
