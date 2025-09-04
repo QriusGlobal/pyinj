@@ -36,6 +36,10 @@ from .exceptions import (
 from .protocols.resources import SupportsAsyncClose, SupportsClose
 from .tokens import Scope, Token, TokenFactory
 from .types import ProviderAsync, ProviderLike, ProviderSync
+from .defaults import (
+    get_default_container as _defaults_get,
+    set_default_container as _defaults_set,
+)
 
 __all__ = ["Container", "get_default_container", "set_default_container"]
 
@@ -57,9 +61,6 @@ class _Registration(Generic[T]):
 _resolution_stack: ContextVar[tuple[Token[Any], ...]] = ContextVar(
     "pyinj_resolution_stack", default=()
 )
-
-from .defaults import get_default_container as _defaults_get, set_default_container as _defaults_set
-
 
 def get_default_container() -> "Container":
     """Get the global default container (casted to concrete type)."""
