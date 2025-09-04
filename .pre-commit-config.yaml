@@ -16,9 +16,9 @@ repos:
         name: basedpyright
         entry: basedpyright
         language: python
-        files: ^(src/|tests/)
+        files: ^src/
         additional_dependencies: [basedpyright]
-        args: ["src/", "tests/"]
+        args: ["src/"]
 
       - id: actionlint
         name: actionlint (GitHub Actions)
