@@ -1,0 +1,16 @@
+# Build and virtual envs
+.venv/
+dist/
+build/
+site/
+
+# Docs and generated assets
+*.min.js
+*.min.css
+
+# VCS metadata
+.git/
+
+# Node or other ecosystems (if present)
+node_modules/
+
