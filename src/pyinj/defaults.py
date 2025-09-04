@@ -43,4 +43,3 @@ def get_default_container() -> "Resolvable[Any]":
 def set_default_container(container: "Resolvable[Any]") -> None:
     """Function alias for DefaultContainer.set()."""
     DefaultContainer.set(container)
-

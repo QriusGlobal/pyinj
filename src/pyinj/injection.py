@@ -15,6 +15,7 @@ from inspect import Parameter, iscoroutinefunction, signature
 from typing import (
     Annotated,
     Any,
+    Awaitable,
     Callable,
     ClassVar,
     Generic,
@@ -31,8 +32,8 @@ from typing import (
     cast as tcast,
 )
 
-from .protocols.resolvable import Resolvable
 from .defaults import get_default_container
+from .protocols.resolvable import Resolvable
 from .tokens import Token
 
 __all__ = [
@@ -523,7 +524,10 @@ def inject(
                     if pname in resolved:
                         # will be injected
                         continue
-                    if param.kind in (Parameter.POSITIONAL_ONLY, Parameter.POSITIONAL_OR_KEYWORD) and arg_i < len(args):
+                    if param.kind in (
+                        Parameter.POSITIONAL_ONLY,
+                        Parameter.POSITIONAL_OR_KEYWORD,
+                    ) and arg_i < len(args):
                         new_kwargs[pname] = args[arg_i]
                         arg_i += 1
                 # bring through any explicit kwargs provided
@@ -569,7 +573,10 @@ def inject(
                 for pname, param in sig.parameters.items():
                     if pname in resolved:
                         continue
-                    if param.kind in (Parameter.POSITIONAL_ONLY, Parameter.POSITIONAL_OR_KEYWORD) and arg_i < len(args):
+                    if param.kind in (
+                        Parameter.POSITIONAL_ONLY,
+                        Parameter.POSITIONAL_OR_KEYWORD,
+                    ) and arg_i < len(args):
                         new_kwargs[pname] = args[arg_i]
                         arg_i += 1
                 new_kwargs.update(kwargs)

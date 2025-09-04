@@ -20,4 +20,3 @@ class Resolvable(Protocol[T]):
 
     async def aget(self, token: Token[T] | type[T]) -> T:  # pragma: no cover - protocol
         ...
-

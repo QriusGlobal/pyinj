@@ -12,9 +12,9 @@ from contextvars import Token as ContextToken
 from types import TracebackType
 from typing import Any, Awaitable, Callable, TypeVar, cast
 from weakref import WeakValueDictionary
-from .protocols.resources import SupportsAsyncClose, SupportsClose
 
 from .exceptions import AsyncCleanupRequiredError
+from .protocols.resources import SupportsAsyncClose, SupportsClose
 from .tokens import Scope, Token
 
 __all__ = [
@@ -41,16 +41,16 @@ _session_context: ContextVar[dict[Token[object], object] | None] = ContextVar(
 _request_cleanup_sync: ContextVar[list[Callable[[], None]] | None] = ContextVar(
     "pyinj_request_cleanup_sync", default=None
 )
-_request_cleanup_async: ContextVar[
-    list[Callable[[], Awaitable[None]]] | None
-] = ContextVar("pyinj_request_cleanup_async", default=None)
+_request_cleanup_async: ContextVar[list[Callable[[], Awaitable[None]]] | None] = (
+    ContextVar("pyinj_request_cleanup_async", default=None)
+)
 
 _session_cleanup_sync: ContextVar[list[Callable[[], None]] | None] = ContextVar(
     "pyinj_session_cleanup_sync", default=None
 )
-_session_cleanup_async: ContextVar[
-    list[Callable[[], Awaitable[None]]] | None
-] = ContextVar("pyinj_session_cleanup_async", default=None)
+_session_cleanup_async: ContextVar[list[Callable[[], Awaitable[None]]] | None] = (
+    ContextVar("pyinj_session_cleanup_async", default=None)
+)
 
 
 def get_current_context() -> ChainMap[Token[object], object] | None:
