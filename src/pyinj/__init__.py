@@ -20,8 +20,9 @@ Quick start:
     # ... use db ...
 """
 
-from pyinj.container import Container, get_default_container, set_default_container
+from pyinj.container import Container
 from pyinj.contextual import ContextualContainer, RequestScope, SessionScope
+from pyinj.defaults import get_default_container, set_default_container
 from pyinj.exceptions import CircularDependencyError, PyInjError, ResolutionError
 from pyinj.injection import Depends, Given, Inject, inject
 from pyinj.metaclasses import Injectable

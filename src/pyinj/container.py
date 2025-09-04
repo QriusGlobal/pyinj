@@ -28,12 +28,6 @@ from typing import (
 )
 
 from .contextual import ContextualContainer
-from .defaults import (
-    get_default_container as _defaults_get,
-)
-from .defaults import (
-    set_default_container as _defaults_set,
-)
 from .exceptions import (
     AsyncCleanupRequiredError,
     CircularDependencyError,
@@ -43,7 +37,7 @@ from .protocols.resources import SupportsAsyncClose, SupportsClose
 from .tokens import Scope, Token, TokenFactory
 from .types import ProviderAsync, ProviderLike, ProviderSync
 
-__all__ = ["Container", "get_default_container", "set_default_container"]
+__all__ = ["Container"]
 
 T = TypeVar("T")
 U = TypeVar("U")
@@ -65,16 +59,6 @@ class _Registration(Generic[T]):
 _resolution_stack: ContextVar[tuple[Token[Any], ...]] = ContextVar(
     "pyinj_resolution_stack", default=()
 )
-
-
-def get_default_container() -> "Container":
-    """Get the global default container (casted to concrete type)."""
-    return cast("Container", _defaults_get())
-
-
-def set_default_container(container: "Container") -> None:
-    """Set the global default container."""
-    _defaults_set(container)
 
 
 class Container(ContextualContainer):
@@ -159,20 +143,21 @@ class Container(ContextualContainer):
                 from typing import get_type_hints
 
                 hints = get_type_hints(cls.__init__)
-                deps: dict[str, type[object]] = {
-                    k: v for k, v in hints.items() if k not in ("self", "return")
-                }
+                deps: dict[str, type[object]] = {}
+                for k, v in hints.items():
+                    if k not in ("self", "return") and isinstance(v, type):
+                        deps[k] = v
             except Exception:
                 deps = {}
 
             if deps:
 
                 def make_factory(
-                    target_cls: type[Any] = cls,
+                    target_cls: type[object] = cls,
                     deps_map: dict[str, type[object]] = deps,
-                ) -> Callable[[], Any]:
-                    def provider() -> Any:
-                        kwargs: dict[str, Any] = {}
+                ) -> Callable[[], object]:
+                    def provider() -> object:
+                        kwargs: dict[str, object] = {}
                         for name, typ in deps_map.items():
                             kwargs[name] = self.get(typ)
                         return target_cls(**kwargs)
@@ -182,7 +167,7 @@ class Container(ContextualContainer):
                 self.register(token, make_factory(), scope=scope)
             else:
                 # No deps, construct directly
-                self.register(token, cast(ProviderLike[Any], cls), scope=scope)
+                self.register(token, cast(ProviderLike[object], cls), scope=scope)
 
     # ============= Internal Helpers (Phase 1) =============
 
@@ -245,11 +230,7 @@ class Container(ContextualContainer):
         Example:
             container.register(Token[DB]("db"), create_db, scope=Scope.SINGLETON)
         """
-        # Validate token type
-        if not isinstance(token, Token) and not isinstance(token, type):
-            raise TypeError(
-                "Token specification must be a Token or type; strings are not supported"
-            )
+        # Token validation is implicit in the type signature
 
         # Convert to Token if needed
         if isinstance(token, Token):
@@ -343,11 +324,7 @@ class Container(ContextualContainer):
         exited during scope cleanup (request/session), or on container close for
         singletons.
         """
-        # Validate token
-        if not isinstance(token, Token) and not isinstance(token, type):
-            raise TypeError(
-                "Token specification must be a Token or type; strings are not supported"
-            )
+        # Token validation is implicit in the type signature
         # To token
         if isinstance(token, Token):
             if scope is not None:

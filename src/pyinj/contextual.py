@@ -197,14 +197,15 @@ class ContextualContainer:
         with self._scope_manager.session_scope():
             yield self
 
-    def _cleanup_scope(self, cache: dict[Token[object], Any]) -> None:
+    def _cleanup_scope(self, cache: dict[Token[object], object]) -> None:
         """
         Clean up resources in LIFO order.
 
         Args:
             cache: Cache of resources to clean up
         """
-        for resource in reversed(list(cache.values())):
+        resources: list[object] = list(cache.values())
+        for resource in reversed(resources):
             try:
                 # Early fail if async cleanup is required in a sync context
                 aclose = getattr(resource, "aclose", None)
@@ -228,7 +229,8 @@ class ContextualContainer:
                     )
                 # Prefer context-manager exit over ad-hoc close for sync path
                 if hasattr(resource, "__exit__"):
-                    resource.__exit__(None, None, None)
+                    exit_fn = getattr(resource, "__exit__")
+                    exit_fn(None, None, None)
                 elif close is not None:
                     close()
             except AsyncCleanupRequiredError:
@@ -237,17 +239,18 @@ class ContextualContainer:
                 # Log but don't fail cleanup
                 pass
 
-    async def _async_cleanup_scope(self, cache: dict[Token[object], Any]) -> None:
+    async def _async_cleanup_scope(self, cache: dict[Token[object], object]) -> None:
         """
         Async cleanup of resources.
 
         Args:
             cache: Cache of resources to clean up
         """
-        tasks: list[Any] = []
+        tasks: list[Awaitable[Any]] = []
         loop = asyncio.get_running_loop()
 
-        for resource in reversed(list(cache.values())):
+        resources: list[object] = list(cache.values())
+        for resource in reversed(resources):
             aclose = getattr(resource, "aclose", None)
             if aclose and callable(aclose):
                 res = aclose()
