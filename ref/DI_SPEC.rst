@@ -1276,11 +1276,11 @@ dependencies, a scoped container is necessary to prevent state leakage.
 
 .. code-block:: python
 
-   from di.core import Container, scoped
+   from pyinj import Container
 
    async def handle_request():
-       root = Container()
-       async with scoped(root) as request_container:
+       container = Container()
+       async with container.async_request_scope() as request_container:
            # Register request-specific items, e.g., a user object
            request_container.register(USER_TOKEN, lambda: current_user)
            # Resolve dependencies using the scoped container
@@ -1690,7 +1690,7 @@ Reference Implementation
 
 ### 1. Core Components
 
-- **Container**: ``src/di/core.py``
+- **Container**: ``src/pyinj/container.py``
 - **Public API**: ``src/di/__init__.py`` (re-exports)
 - **Ports (example)**: ``src/servicem8py/ports.py``
 - **SDK Boundary (example)**: ``src/servicem8py/client.py``
@@ -1714,7 +1714,7 @@ Use the standard ``src/`` layout for a standalone DI package:
      src/
        di/
          __init__.py      # exports: Token, Container, ScopedContainer, depends, inject, ...
-         core.py          # Core implementation
+        container.py     # Core implementation
          security.py      # Security features
          safety.py        # Safety guarantees
          types.py         # Type definitions
