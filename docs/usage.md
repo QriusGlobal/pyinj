@@ -45,6 +45,24 @@ container.register(DB, DatabaseConnection, Scope.SINGLETON)
 
 conn = await container.aget(DB)
 await container.dispose()
+
+```
+
+### Circuit Breaker for Incorrect Sync Cleanup
+
+Attempting to use synchronous cleanup (`with container:`) when an async-only
+resource is present raises `AsyncCleanupRequiredError`:
+
+```python
+from pyinj.exceptions import AsyncCleanupRequiredError
+
+_ = await container.aget(DB)
+
+try:
+    with container:
+        pass
+except AsyncCleanupRequiredError:
+    ...
 ```
 
 ## Plain Type Injection (ergonomic default)

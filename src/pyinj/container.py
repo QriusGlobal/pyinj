@@ -16,7 +16,11 @@ from types import MappingProxyType, TracebackType
 from typing import Any, Mapping, TypeVar, cast
 
 from .contextual import ContextualContainer
-from .exceptions import CircularDependencyError, ResolutionError
+from .exceptions import (
+    AsyncCleanupRequiredError,
+    CircularDependencyError,
+    ResolutionError,
+)
 from .protocols import SupportsAsyncClose, SupportsClose
 from .tokens import Scope, Token, TokenFactory
 from .types import ProviderAsync, ProviderLike, ProviderSync
@@ -542,19 +546,19 @@ class Container(ContextualContainer):
             try:
                 # If resource exposes async cleanup, fail fast in sync context
                 if hasattr(resource, "aclose") or hasattr(resource, "__aexit__"):
-                    raise RuntimeError(
-                        f"Resource {type(resource).__name__} requires async cleanup; "
-                        f"use 'await container.aclose()' or an async scope"
+                    raise AsyncCleanupRequiredError(
+                        type(resource).__name__,
+                        "Use 'await container.aclose()' or an async scope.",
                     )
                 close = getattr(resource, "close", None)
                 if close is not None and inspect.iscoroutinefunction(close):
-                    raise RuntimeError(
-                        f"Resource {type(resource).__name__}.close() is async; "
-                        f"use 'await container.aclose()' or an async scope"
+                    raise AsyncCleanupRequiredError(
+                        type(resource).__name__,
+                        "Use 'await container.aclose()' or an async scope.",
                     )
                 if close is not None:
                     close()
-            except RuntimeError:
+            except AsyncCleanupRequiredError:
                 # propagate circuit breaker
                 raise
             except Exception:

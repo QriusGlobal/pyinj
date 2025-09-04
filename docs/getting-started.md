@@ -28,11 +28,14 @@ logger = container.get(LOGGER)
 logger.info("Hello")
 ```
 
-## Cleanup
+## Cleanup and Circuit Breaker
 
-Call `dispose()` to close resources (async-friendly):
+Call `aclose()`/`dispose()` to close resources (async-friendly):
 
 ```python
-await container.dispose()
+await container.aclose()  # or await container.dispose()
 ```
 
+If you attempt to close async-only resources from a synchronous context
+(`with container:`), PyInj raises `AsyncCleanupRequiredError` to alert you to
+use an async scope or `await container.aclose()`.

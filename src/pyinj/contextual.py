@@ -14,6 +14,7 @@ from typing import Any, TypeVar, cast
 from weakref import WeakValueDictionary
 
 from .tokens import Scope, Token
+from .exceptions import AsyncCleanupRequiredError
 
 __all__ = [
     "ContextualContainer",
@@ -145,21 +146,21 @@ class ContextualContainer:
             try:
                 # Early fail if async cleanup is required in a sync context
                 if hasattr(resource, "aclose") or hasattr(resource, "__aexit__"):
-                    raise RuntimeError(
-                        f"Resource {type(resource).__name__} requires async cleanup; "
-                        f"use an async request/session scope"
+                    raise AsyncCleanupRequiredError(
+                        type(resource).__name__,
+                        "Use an async request/session scope.",
                     )
                 close = getattr(resource, "close", None)
                 if close is not None and inspect.iscoroutinefunction(close):
-                    raise RuntimeError(
-                        f"Resource {type(resource).__name__}.close() is async; "
-                        f"use an async request/session scope"
+                    raise AsyncCleanupRequiredError(
+                        type(resource).__name__,
+                        "Use an async request/session scope.",
                     )
                 if close is not None:
                     close()
                 elif hasattr(resource, "__exit__"):
                     resource.__exit__(None, None, None)
-            except RuntimeError:
+            except AsyncCleanupRequiredError:
                 raise
             except Exception:
                 # Log but don't fail cleanup

@@ -16,7 +16,7 @@
 
 A **type-safe** dependency injection container for Python 3.13+ that provides:
 
-- 🚀 **Thread-safe and async-safe** resolution  
+- 🚀 **Thread-safe and async-safe** resolution (ContextVar-based; no cross-talk)  
 - ⚡ **O(1) performance** for type lookups
 - 🔍 **Circular dependency detection**
 - 🧹 **Automatic resource cleanup**
@@ -138,6 +138,36 @@ await db.connect()
 
 # Automatic cleanup
 await container.dispose()  # Safely closes all resources
+
+### Circuit-Breaker Cleanup (New)
+
+To prevent subtle leaks, PyInj enforces async cleanup for async-only resources.
+Attempting to use synchronous cleanup with such a resource raises a
+semantically-typed exception:
+
+```python
+from pyinj import Container, Token, Scope
+from pyinj.exceptions import AsyncCleanupRequiredError
+from httpx import AsyncClient
+
+container = Container()
+client_token = Token[AsyncClient]("client")
+container.register(client_token, AsyncClient, Scope.SINGLETON)
+_ = await container.aget(client_token)
+
+# This will raise AsyncCleanupRequiredError
+try:
+    with container:
+        pass
+except AsyncCleanupRequiredError:
+    ...
+
+# Use async cleanup instead
+await container.aclose()
+```
+
+The container and contexts track resources broadly (via `aclose`, `__aexit__`,
+or `close`) and close them in LIFO order.
 ```
 
 ### 4. Testing Made Easy
@@ -363,16 +393,16 @@ cd pyinj
 uv sync
 
 # Run tests
-pytest
+uv run pytest -q
 
 # Type checking
-basedpyright src/
+uvx basedpyright src
 
 # Format code
-ruff format .
+uvx ruff format .
 
 # Run all quality checks
-ruff check . && basedpyright src/ && pytest
+uvx ruff check . && uvx basedpyright src && uv run pytest -q
 ```
 
 ## Release Process

@@ -9,7 +9,12 @@ if TYPE_CHECKING:
 
     from pyinj.tokens import Token
 
-__all__ = ["CircularDependencyError", "PyInjError", "ResolutionError"]
+__all__ = [
+    "CircularDependencyError",
+    "PyInjError",
+    "ResolutionError",
+    "AsyncCleanupRequiredError",
+]
 
 
 class PyInjError(Exception):
@@ -55,4 +60,17 @@ class CircularDependencyError(ResolutionError):
             token,
             chain,
             f"Circular dependency detected: {' -> '.join(t.name for t in chain)} -> {token.name}",
+        )
+
+
+class AsyncCleanupRequiredError(PyInjError):
+    """Raised when a synchronous cleanup is attempted for an async-only resource.
+
+    This indicates incorrect usage by the caller. Use an async scope or
+    call ``await container.aclose()`` to clean up asynchronous resources.
+    """
+
+    def __init__(self, resource_type: str, advice: str) -> None:
+        super().__init__(
+            f"Resource {resource_type} requires asynchronous cleanup. {advice}"
         )

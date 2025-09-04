@@ -132,6 +132,7 @@ async def test_sync_cleanup_circuit_breaker_raises_for_async_resources() -> None
     assert len(resources) > 0
 
     # Using sync context manager should raise due to async cleanup required
-    with pytest.raises(RuntimeError):
+    from pyinj.exceptions import AsyncCleanupRequiredError
+    with pytest.raises(AsyncCleanupRequiredError):
         with container:
             pass
