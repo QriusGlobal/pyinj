@@ -33,7 +33,7 @@ from .exceptions import (
     CircularDependencyError,
     ResolutionError,
 )
-from .protocols import SupportsAsyncClose, SupportsClose
+from .protocols.resources import SupportsAsyncClose, SupportsClose
 from .tokens import Scope, Token, TokenFactory
 from .types import ProviderAsync, ProviderLike, ProviderSync
 
@@ -53,27 +53,22 @@ class _Registration(Generic[T]):
     provider: Callable[[], Any]
     cleanup: CleanupMode
 
-# Global default container
-_default_container: Container | None = None
-
 # Task-local resolution stack to avoid false circular detection across asyncio tasks
 _resolution_stack: ContextVar[tuple[Token[Any], ...]] = ContextVar(
     "pyinj_resolution_stack", default=()
 )
 
-
-def get_default_container() -> Container:
-    """Get the global default container."""
-    global _default_container
-    if _default_container is None:
-        _default_container = Container()
-    return _default_container
+from .defaults import get_default_container as _defaults_get, set_default_container as _defaults_set
 
 
-def set_default_container(container: Container) -> None:
+def get_default_container() -> "Container":
+    """Get the global default container (casted to concrete type)."""
+    return cast("Container", _defaults_get())
+
+
+def set_default_container(container: "Container") -> None:
     """Set the global default container."""
-    global _default_container
-    _default_container = container
+    _defaults_set(container)
 
 
 class Container(ContextualContainer):
@@ -586,19 +581,25 @@ class Container(ContextualContainer):
                         value = cm.__enter__()
                         self._set_singleton_cached(token, value)
                         # schedule cleanup
-                        self._singleton_cleanup_sync.append(lambda cm=cm: cm.__exit__(None, None, None))
-                        self._resources.append(value)
+                        def _cleanup_cm(cm: ContextManager[U] = cm) -> None:
+                            cm.__exit__(None, None, None)
+                        self._singleton_cleanup_sync.append(_cleanup_cm)
+                        if isinstance(value, (SupportsClose, SupportsAsyncClose)):
+                            self._resources.append(cast(SupportsClose | SupportsAsyncClose, value))
                         return cast(U, value)
                 else:
                     cm = cast(ContextManager[U], reg.provider())
                     value = cm.__enter__()
                     self.store_in_context(token, value)
                     # register per-scope cleanup
+                    def _cleanup_cm(cm: ContextManager[U] = cm) -> None:
+                        cm.__exit__(None, None, None)
                     if effective_scope == Scope.REQUEST:
-                        self._register_request_cleanup_sync(lambda cm=cm: cm.__exit__(None, None, None))
+                        self._register_request_cleanup_sync(_cleanup_cm)
                     elif effective_scope == Scope.SESSION:
-                        self._register_session_cleanup_sync(lambda cm=cm: cm.__exit__(None, None, None))
-                    self._resources.append(value)
+                        self._register_session_cleanup_sync(_cleanup_cm)
+                    if isinstance(value, (SupportsClose, SupportsAsyncClose)):
+                        self._resources.append(cast(SupportsClose | SupportsAsyncClose, value))
                     return cast(U, value)
 
             provider = self._get_provider(token)
@@ -674,18 +675,24 @@ class Container(ContextualContainer):
                         cm = cast(AsyncContextManager[U], reg.provider())
                         value = await cm.__aenter__()
                         self._set_singleton_cached(token, value)
-                        self._singleton_cleanup_async.append(lambda cm=cm: cm.__aexit__(None, None, None))
-                        self._resources.append(value)
+                        async def _acleanup_cm(cm: AsyncContextManager[U] = cm) -> None:
+                            await cm.__aexit__(None, None, None)
+                        self._singleton_cleanup_async.append(_acleanup_cm)
+                        if isinstance(value, (SupportsClose, SupportsAsyncClose)):
+                            self._resources.append(cast(SupportsClose | SupportsAsyncClose, value))
                         return cast(U, value)
                 else:
                     cm = cast(AsyncContextManager[U], reg.provider())
                     value = await cm.__aenter__()
                     self.store_in_context(token, value)
+                    async def _acleanup_cm(cm: AsyncContextManager[U] = cm) -> None:
+                        await cm.__aexit__(None, None, None)
                     if effective_scope == Scope.REQUEST:
-                        self._register_request_cleanup_async(lambda cm=cm: cm.__aexit__(None, None, None))
+                        self._register_request_cleanup_async(_acleanup_cm)
                     elif effective_scope == Scope.SESSION:
-                        self._register_session_cleanup_async(lambda cm=cm: cm.__aexit__(None, None, None))
-                    self._resources.append(value)
+                        self._register_session_cleanup_async(_acleanup_cm)
+                    if isinstance(value, (SupportsClose, SupportsAsyncClose)):
+                        self._resources.append(cast(SupportsClose | SupportsAsyncClose, value))
                     return cast(U, value)
 
             # fallback legacy providers

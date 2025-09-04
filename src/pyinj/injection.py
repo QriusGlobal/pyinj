@@ -31,7 +31,8 @@ from typing import (
     cast as tcast,
 )
 
-from .protocols import Resolvable
+from .protocols.resolvable import Resolvable
+from .defaults import get_default_container
 from .tokens import Token
 
 __all__ = [
@@ -490,7 +491,7 @@ def inject(
         if iscoroutinefunction(fn):
 
             @wraps(fn)
-            async def async_wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
+            async def async_wrapper(*args: Any, **kwargs: Any) -> R:
                 # Get dependencies if not cached
                 nonlocal deps
                 if deps is None:
@@ -503,9 +504,7 @@ def inject(
                 # Get container
                 nonlocal container
                 if container is None:
-                    # Try to get default container via indirection (patchable)
-                    from .injection import get_default_container as _gdc
-                    container = _gdc()
+                    container = get_default_container()
 
                 # Extract overrides from kwargs
                 overrides: dict[str, Any] = {}
@@ -532,14 +531,14 @@ def inject(
                 # inject resolved deps
                 new_kwargs.update(resolved)
 
-                return await fn(**new_kwargs)
+                return await cast(Callable[..., Awaitable[R]], fn)(**new_kwargs)
 
             return cast(Callable[P, R], async_wrapper)
 
         else:
 
             @wraps(fn)
-            def sync_wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
+            def sync_wrapper(*args: Any, **kwargs: Any) -> R:
                 # Get dependencies if not cached
                 nonlocal deps
                 if deps is None:
@@ -552,8 +551,7 @@ def inject(
                 # Get container
                 nonlocal container
                 if container is None:
-                    from .injection import get_default_container as _gdc
-                    container = _gdc()
+                    container = get_default_container()
 
                 # Extract overrides from kwargs
                 overrides: dict[str, Any] = {}
@@ -577,19 +575,14 @@ def inject(
                 new_kwargs.update(kwargs)
                 new_kwargs.update(resolved)
 
-                return fn(**new_kwargs)
+                return cast(Callable[..., R], fn)(**new_kwargs)
 
-            return cast(Callable[P, R], sync_wrapper)
+            return sync_wrapper
 
     # Handle both @inject and @inject(...) syntax
     if func is None:
         # Called with parameters: @inject(container=...)
-        return cast(Callable[[Callable[P, R]], Callable[P, R]], decorator)
+        return decorator
     else:
         # Called without parameters: @inject
-        return cast(Callable[P, R], decorator(cast(Callable[P, R], func)))
-def get_default_container() -> Resolvable[Any]:
-    """Indirection for default container lookup (patchable in tests)."""
-    from .container import get_default_container as _gdc
-
-    return _gdc()
+        return decorator(func)

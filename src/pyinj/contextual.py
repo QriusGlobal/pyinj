@@ -12,6 +12,7 @@ from contextvars import Token as ContextToken
 from types import TracebackType
 from typing import Any, Awaitable, Callable, TypeVar, cast
 from weakref import WeakValueDictionary
+from .protocols.resources import SupportsAsyncClose, SupportsClose
 
 from .exceptions import AsyncCleanupRequiredError
 from .tokens import Scope, Token
@@ -96,8 +97,6 @@ class ContextualContainer:
         self._async_locks: dict[Token[object], asyncio.Lock] = {}
 
         # Track resources for cleanup
-        from .protocols import SupportsAsyncClose, SupportsClose
-
         self._resources: list[SupportsClose | SupportsAsyncClose] = []
 
         # Scope manager (RAII contexts, precedence enforcement)
