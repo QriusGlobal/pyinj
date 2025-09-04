@@ -159,6 +159,8 @@ class ContextualContainer:
                     close()
                 elif hasattr(resource, "__exit__"):
                     resource.__exit__(None, None, None)
+            except RuntimeError:
+                raise
             except Exception:
                 # Log but don't fail cleanup
                 pass

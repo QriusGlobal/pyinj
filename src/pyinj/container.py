@@ -554,7 +554,11 @@ class Container(ContextualContainer):
                     )
                 if close is not None:
                     close()
+            except RuntimeError:
+                # propagate circuit breaker
+                raise
             except Exception:
+                # ignore best-effort cleanup errors
                 pass
 
     async def __aenter__(self) -> Container:  # pragma: no cover - trivial
@@ -627,6 +631,11 @@ class Container(ContextualContainer):
             raise TypeError(
                 f"Provider for token '{token.name}' returned {type(instance).__name__}, expected {token.type_.__name__}"
             )
-        if isinstance(instance, (SupportsClose, SupportsAsyncClose)):
-            # track for later cleanup
+        # Track cleanable resources broadly (protocols or common cleanup methods)
+        if (
+            isinstance(instance, (SupportsClose, SupportsAsyncClose))
+            or hasattr(instance, "aclose")
+            or hasattr(instance, "__aexit__")
+            or hasattr(instance, "close")
+        ):
             self._resources.append(instance)

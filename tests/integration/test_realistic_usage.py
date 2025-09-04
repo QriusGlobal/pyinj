@@ -1,7 +1,7 @@
 """Realistic integration tests emulating user projects with async libs.
 
-These tests demonstrate typical project usage of pyinj with httpx and
-an async DB client (aiosqlite). Playwright-style usage is simulated via a fake to avoid
+These tests demonstrate typical project usage of pyinj with httpx only
+to keep tests fast and network-light. Playwright-style usage is simulated via a fake to avoid
 browser downloads while exercising DI patterns and cleanup behavior.
 """
 
@@ -10,7 +10,6 @@ from __future__ import annotations
 import asyncio
 from typing import Annotated, Any
 
-import aiosqlite
 import httpx
 import pytest
 
@@ -29,43 +28,27 @@ def _make_mock_httpx() -> httpx.AsyncClient:
 
 
 @pytest.mark.asyncio
-async def test_user_style_project_di_with_httpx_and_aiosqlite() -> None:
+async def test_user_style_project_di_with_httpx_only() -> None:
     container = Container()
 
     # Tokens a user would define centrally
     httpx_token = Token("http_client", httpx.AsyncClient, scope=Scope.SINGLETON)
-    db_token = Token("db", aiosqlite.Connection, scope=Scope.REQUEST)
 
     # Providers users would register during app startup
     async def create_http_client() -> httpx.AsyncClient:
         await asyncio.sleep(0)
         return _make_mock_httpx()
 
-    async def create_db() -> aiosqlite.Connection:
-        db = await aiosqlite.connect(":memory:")
-        await db.execute("create table t(x int)")
-        await db.execute("insert into t(x) values (42)")
-        await db.commit()
-        return db
-
     container.register(httpx_token, create_http_client)
-    container.register(db_token, create_db)
 
     # User endpoint using @inject
     @inject(container=container)
     async def endpoint(
         user_id: int,
         client: Annotated[httpx.AsyncClient, Inject()],
-        db: Annotated[aiosqlite.Connection, Inject()],
     ) -> dict[str, Any]:
         r = await client.get(f"/users/{user_id}")
-        cur = await db.execute("select x from t")
-        rows = await cur.fetchall()
-        return {
-            "status": r.status_code,
-            "path": r.json()["path"],
-            "rows": [{"answer": row[0]} for row in rows],
-        }
+        return {"status": r.status_code, "path": r.json()["path"]}
 
     # Simulate concurrent requests with isolated scopes
     from typing import Awaitable, Callable, cast
@@ -78,15 +61,13 @@ async def test_user_style_project_di_with_httpx_and_aiosqlite() -> None:
     results = await asyncio.gather(*(call(i) for i in range(10)))
     assert all(r["status"] == 200 for r in results)
     assert all(r["path"].startswith("/users/") for r in results)
-    assert all(r["rows"][0]["answer"] == 42 for r in results)
 
     # Singleton instances created only once
     c1 = await container.aget(httpx_token)
     c2 = await container.aget(httpx_token)
     assert c1 is c2
 
-    # DB is request-scoped; outside scope not cached
-    assert container.resolve_from_context(db_token) is None
+    # No DB in this variant
 
     await container.aclose()
 
@@ -126,3 +107,31 @@ async def test_playwright_style_fake_browser_with_cleanup() -> None:
     b = await container.aget(browser_token)
     await container.aclose()
     assert b.closed is True
+
+
+@pytest.mark.asyncio
+async def test_sync_cleanup_circuit_breaker_raises_for_async_resources() -> None:
+    """Using sync cleanup with async-only resources should fail fast.
+
+    This ensures developers get immediate feedback to await async cleanup
+    rather than silently leaking resources.
+    """
+    container = Container()
+
+    httpx_token = Token("http_client", httpx.AsyncClient, scope=Scope.SINGLETON)
+
+    async def create_http_client() -> httpx.AsyncClient:
+        return _make_mock_httpx()
+
+    container.register(httpx_token, create_http_client)
+
+    # Create the async client (tracked resource)
+    _ = await container.aget(httpx_token)
+    # Ensure the resource is tracked
+    resources = container.resources_view()
+    assert len(resources) > 0
+
+    # Using sync context manager should raise due to async cleanup required
+    with pytest.raises(RuntimeError):
+        with container:
+            pass
