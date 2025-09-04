@@ -47,3 +47,6 @@ env/
 .DS_Store
 Thumbs.db
 .tools/
+ 
+# MkDocs build output (published separately via gh-pages)
+site/
