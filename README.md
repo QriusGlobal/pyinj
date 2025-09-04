@@ -177,9 +177,40 @@ except AsyncCleanupRequiredError:
 await container.aclose()
 ```
 
-Container-level cleanup manages resources registered via `register_context(...)` and
+Container-level cleanup manages resources registered via `register_context_sync/async` (or `register_context(..., is_async=...)`) and
 closes them in LIFO order. Request/session scopes also clean up resources stored
 in the scope when the scope exits.
+
+Typed registration helpers:
+
+```python
+from contextlib import contextmanager, asynccontextmanager
+from collections.abc import Generator, AsyncGenerator
+
+# Sync context manager
+@contextmanager
+def db_cm() -> Generator[DatabaseConnection, None, None]:
+    db = DatabaseConnection()
+    try:
+        yield db
+    finally:
+        db.close()
+
+container.register_context_sync(Token("db", DatabaseConnection, scope=Scope.SINGLETON), lambda: db_cm())
+
+# Async context manager
+@asynccontextmanager
+async def client_cm() -> AsyncGenerator[AsyncClient, None]:
+    client = AsyncClient()
+    try:
+        yield client
+    finally:
+        await client.aclose()
+
+container.register_context_async(Token("client", AsyncClient, scope=Scope.SINGLETON), lambda: client_cm())
+```
+
+Fail-fast behavior: if a provider raises during setup/enter (`__enter__`/`__aenter__`), the exception propagates to the resolver so the failure is explicit and debuggable.
 ```
 
 ### 4. Testing Made Easy

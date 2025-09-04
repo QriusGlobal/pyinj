@@ -166,8 +166,6 @@ class TestThreadSafety:
 
     def test_resource_tracking_thread_safety(self):
         """Test that resource tracking is thread-safe."""
-        from pyinj.protocols import SupportsClose
-
         class CloseableResource:
             def __init__(self, resource_id: str):
                 self.resource_id = resource_id

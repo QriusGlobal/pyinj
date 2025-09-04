@@ -115,4 +115,11 @@ container.register_context(CLIENT, lambda: client_cm(), is_async=True)
 
 # Later, ensure cleanup runs
 await container.aclose()  # or await container.dispose()
+
+Mixed cleanup in async request scopes:
+- In `async_request_scope`, async cleanups run first, then sync cleanups. This ensures awaiting all async finalizers before executing any synchronous ones, avoiding event loop blocking.
+
+Typed registration helpers:
+- `register_context_sync(token, cm_provider, scope=...)` for sync context managers.
+- `register_context_async(token, cm_provider, scope=...)` for async context managers.
 ```

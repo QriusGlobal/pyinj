@@ -5,22 +5,31 @@ from __future__ import annotations
 import asyncio
 import threading
 from collections import defaultdict, deque
-from dataclasses import dataclass
-from enum import Enum, auto
-import inspect
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar
 from contextvars import Token as CtxToken
+from dataclasses import dataclass
+from enum import Enum, auto
 from functools import lru_cache
 from itertools import groupby
 from types import MappingProxyType, TracebackType
-from typing import Any, Mapping, TypeVar, cast, Generic, Awaitable
+from typing import (
+    Any,
+    AsyncContextManager,
+    Awaitable,
+    ContextManager,
+    Generic,
+    Literal,
+    Mapping,
+    TypeVar,
+    cast,
+    overload,
+)
 
 from .contextual import ContextualContainer
 from .exceptions import (
     AsyncCleanupRequiredError,
-    CleanupContractError,
     CircularDependencyError,
     ResolutionError,
 )
@@ -99,7 +108,7 @@ class Container(ContextualContainer):
 
         # Override less-precise base attributes with typed variants
         self._providers: dict[Token[object], ProviderLike[object]] = {}
-        self._registrations: dict[Token[object], _Registration] = {}
+        self._registrations: dict[Token[object], _Registration[object]] = {}
         self._token_scopes: dict[Token[object], Scope] = {}
         self._singletons: dict[Token[object], object] = {}
         self._async_locks: dict[Token[object], asyncio.Lock] = {}
@@ -149,12 +158,17 @@ class Container(ContextualContainer):
                 from typing import get_type_hints
 
                 hints = get_type_hints(cls.__init__)
-                deps = {k: v for k, v in hints.items() if k not in ("self", "return")}
+                deps: dict[str, type[object]] = {
+                    k: v for k, v in hints.items() if k not in ("self", "return")
+                }
             except Exception:
                 deps = {}
 
             if deps:
-                def make_factory(target_cls=cls, deps_map=deps):
+                def make_factory(
+                    target_cls: type[Any] = cls,
+                    deps_map: dict[str, type[object]] = deps,
+                ) -> Callable[[], Any]:
                     def provider() -> Any:
                         kwargs: dict[str, Any] = {}
                         for name, typ in deps_map.items():
@@ -286,6 +300,28 @@ class Container(ContextualContainer):
         """Register a transient-scoped dependency."""
         return self.register(token, provider, scope=Scope.TRANSIENT)
 
+    @overload
+    def register_context(
+        self,
+        token: Token[U] | type[U],
+        cm_provider: Callable[[], ContextManager[U]],
+        *,
+        is_async: Literal[False],
+        scope: Scope | None = None,
+    ) -> "Container":
+        ...
+
+    @overload
+    def register_context(
+        self,
+        token: Token[U] | type[U],
+        cm_provider: Callable[[], AsyncContextManager[U]],
+        *,
+        is_async: Literal[True],
+        scope: Scope | None = None,
+    ) -> "Container":
+        ...
+
     def register_context(
         self,
         token: Token[U] | type[U],
@@ -296,10 +332,12 @@ class Container(ContextualContainer):
     ) -> "Container":
         """Register a context-managed dependency.
 
-        The provider must return a context manager (sync) when ``is_async=False``
-        or an async context manager when ``is_async=True``. The container will
-        enter the context on first resolution within the declared scope and exit
-        it during scope cleanup.
+        - When ``is_async=False``, ``cm_provider`` must return a ``ContextManager[T]``.
+        - When ``is_async=True``, ``cm_provider`` must return an ``AsyncContextManager[T]``.
+
+        The context is entered on first resolution within the declared scope and
+        exited during scope cleanup (request/session), or on container close for
+        singletons.
         """
         # Validate token
         if not isinstance(token, (Token, type)):
@@ -321,11 +359,38 @@ class Container(ContextualContainer):
             if obj_token in self._providers or obj_token in self._registrations or obj_token in self._singletons:
                 raise ValueError(f"Token '{obj_token.name}' is already registered")
             self._registrations[obj_token] = _Registration(
-                provider=cast(Callable[[], Any], cm_provider),
+                provider=cm_provider,
                 cleanup=CleanupMode.CONTEXT_ASYNC if is_async else CleanupMode.CONTEXT_SYNC,
             )
             self._type_index[obj_token.type_] = obj_token
         return self
+
+    # Strongly-typed helpers separating sync/async context registration
+    def register_context_sync(
+        self,
+        token: Token[U] | type[U],
+        cm_provider: Callable[[], ContextManager[U]],
+        *,
+        scope: Scope | None = None,
+    ) -> "Container":
+        """Typed helper to register a sync context-managed provider.
+
+        Equivalent to ``register_context(..., is_async=False)``.
+        """
+        return self.register_context(token, cm_provider, is_async=False, scope=scope)
+
+    def register_context_async(
+        self,
+        token: Token[U] | type[U],
+        cm_provider: Callable[[], AsyncContextManager[U]],
+        *,
+        scope: Scope | None = None,
+    ) -> "Container":
+        """Typed helper to register an async context-managed provider.
+
+        Equivalent to ``register_context(..., is_async=True)``.
+        """
+        return self.register_context(token, cm_provider, is_async=True, scope=scope)
 
     def register_value(self, token: Token[U] | type[U], value: U) -> "Container":
         """Register a pre-created value as a singleton."""

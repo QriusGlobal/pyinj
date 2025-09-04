@@ -28,6 +28,7 @@ nav:
   - Overview: index.md
   - Getting Started: getting-started.md
   - Usage: usage.md
+  - LLM Guide: llm.md
   - Advanced: advanced.md
   - Performance: performance.md
   - API: api.md

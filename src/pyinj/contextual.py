@@ -3,19 +3,18 @@
 from __future__ import annotations
 
 import asyncio
-from collections import ChainMap
 import inspect
+from collections import ChainMap
 from collections.abc import AsyncIterator, Iterator
-from typing import Awaitable, Callable
 from contextlib import asynccontextmanager, contextmanager
 from contextvars import ContextVar
 from contextvars import Token as ContextToken
 from types import TracebackType
-from typing import Any, TypeVar, cast
+from typing import Any, Awaitable, Callable, TypeVar, cast
 from weakref import WeakValueDictionary
 
-from .tokens import Scope, Token
 from .exceptions import AsyncCleanupRequiredError
+from .tokens import Scope, Token
 
 __all__ = [
     "ContextualContainer",
@@ -107,6 +106,11 @@ class ContextualContainer:
     # ---- Registration of per-scope cleanup operations (used by Container) ----
 
     def _register_request_cleanup_sync(self, fn: Callable[[], None]) -> None:
+        """Register a sync cleanup for the current request scope.
+
+        Internal API called by the container when a sync context-managed resource
+        is entered within a request scope. Cleanups run in LIFO order on scope exit.
+        """
         stack = _request_cleanup_sync.get()
         if stack is None:
             raise RuntimeError("No active request scope for registering cleanup")
@@ -115,12 +119,21 @@ class ContextualContainer:
     def _register_request_cleanup_async(
         self, fn: Callable[[], Awaitable[None]]
     ) -> None:
+        """Register an async cleanup for the current request scope.
+
+        Internal API called by the container for async context-managed resources.
+        Cleanups run before sync cleanups on async scope exit.
+        """
         stack = _request_cleanup_async.get()
         if stack is None:
             raise RuntimeError("No active request scope for registering async cleanup")
         stack.append(fn)
 
     def _register_session_cleanup_sync(self, fn: Callable[[], None]) -> None:
+        """Register a sync cleanup for the active session scope.
+
+        Internal API used for session-scoped sync context-managed resources.
+        """
         stack = _session_cleanup_sync.get()
         if stack is None:
             raise RuntimeError("No active session scope for registering cleanup")
@@ -129,6 +142,10 @@ class ContextualContainer:
     def _register_session_cleanup_async(
         self, fn: Callable[[], Awaitable[None]]
     ) -> None:
+        """Register an async cleanup for the active session scope.
+
+        Internal API used for session-scoped async context-managed resources.
+        """
         stack = _session_cleanup_async.get()
         if stack is None:
             raise RuntimeError("No active session scope for registering async cleanup")
