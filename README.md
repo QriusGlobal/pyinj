@@ -7,6 +7,40 @@
 
 > Status: Stable — Actively maintained. Breaking changes follow semantic versioning.
 
+## Project Status
+
+Category: CI/CD
+
+[![CI](https://github.com/QriusGlobal/pyinj/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/QriusGlobal/pyinj/actions/workflows/ci.yml)
+[![Docs Build](https://img.shields.io/badge/docs-build-green?logo=readthedocs&logoColor=white)](https://qriusglobal.github.io/pyinj/)
+[![Release](https://img.shields.io/github/v/release/QriusGlobal/pyinj?display_name=tag&sort=semver)](https://github.com/QriusGlobal/pyinj/releases)
+
+Category: Quality
+
+[![Lint: Ruff](https://img.shields.io/badge/lint-ruff-46a2f1?logo=ruff&logoColor=white)](https://docs.astral.sh/ruff/)
+[![Types: BasedPyright](https://img.shields.io/badge/types-basedpyright-1f6feb?logo=python&logoColor=white)](https://github.com/DetachHead/basedpyright)
+[![Coverage](https://img.shields.io/badge/coverage-tracked-lightgrey)](#)
+
+Category: Package
+
+[![PyPI version](https://img.shields.io/pypi/v/pyinj.svg)](https://pypi.org/project/pyinj/)
+[![Python versions](https://img.shields.io/pypi/pyversions/pyinj.svg)](https://pypi.org/project/pyinj/)
+
+Category: Community
+
+[![Discord](https://img.shields.io/badge/discord-join-grey?logo=discord&logoColor=white)](#)
+[![Matrix](https://img.shields.io/badge/matrix-join-grey?logo=matrix&logoColor=white)](#)
+[![Medium](https://img.shields.io/badge/medium-read-grey?logo=medium&logoColor=white)](#)
+[![Twitter](https://img.shields.io/badge/twitter-follow-grey?logo=twitter&logoColor=white)](#)
+[![Blog](https://img.shields.io/badge/blog-read-grey?logo=blogger&logoColor=white)](#)
+
+Category: Meta
+
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Code Style: Ruff](https://img.shields.io/badge/code%20style-ruff-46a2f1?logo=ruff&logoColor=white)](https://docs.astral.sh/ruff/formatter/)
+[![Linting: Ruff](https://img.shields.io/badge/linting-ruff-46a2f1?logo=ruff&logoColor=white)](https://docs.astral.sh/ruff/)
+[![Typing](https://img.shields.io/badge/typing-strict-blue?logo=python&logoColor=white)](#)
+
 ## Stability
 
 - Beta quality: APIs are stabilizing and may change.
