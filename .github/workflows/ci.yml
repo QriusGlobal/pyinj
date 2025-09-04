@@ -32,10 +32,23 @@ jobs:
         run: |
           uv pip install -e .[dev]
 
-      - name: Run pre-commit (quality gates)
+      - name: Format check (ruff)
         run: |
-          uv pip install pre-commit
-          pre-commit run --all-files --show-diff-on-failure
+          uvx ruff format --check src
+
+      - name: Lint (ruff)
+        run: |
+          uvx ruff check src
+
+      - name: Type check (basedpyright)
+        run: |
+          uvx basedpyright src
+
+      - name: Tests (pytest)
+        env:
+          PYTHONPATH: src
+        run: |
+          uv run pytest -q
 
   docs:
     runs-on: ubuntu-latest

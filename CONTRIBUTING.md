@@ -91,6 +91,25 @@ make clean        # Clean build artifacts
 make all          # Run format, lint, test, and docs
 ```
 
+## 🔱 Branching & Releases
+
+- `main`: protected and always deployable. No direct pushes; merge via PR.
+- `feature/*`: all new work starts here; branch from latest `main`; open PR to `main`.
+- `release/*`: stabilization only (version bumps, docs, fixes). Create from `main` when preparing a release; merge back to `main` and tag from `main`.
+- `hotfix/*`: branch from a release tag for urgent fixes; merge back to `main` and active release branches; tag a patch release.
+
+## 🧭 CI Pipeline (deterministic)
+
+CI runs checks in this order (check-only, no auto-fix):
+
+1. Format check: `uvx ruff format --check src`
+2. Lint: `uvx ruff check src`
+3. Type check: `uvx basedpyright src`
+4. Tests: `PYTHONPATH=src uv run pytest -q`
+5. Docs (separate job): `PYTHONPATH=src uv run mkdocs build`
+
+Pre-commit can auto-format locally; CI only checks and never modifies files. Ensure you run `ruff format` locally before pushing.
+
 ## 📝 Coding Standards
 
 ### Code Style
