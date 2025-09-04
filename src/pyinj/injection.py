@@ -505,7 +505,7 @@ def inject(
                 if container is None:
                     # Try to get default container via indirection (patchable)
                     from .injection import get_default_container as _gdc
-                    container = tcast(Resolvable[Any], _gdc())
+                    container = _gdc()
 
                 # Extract overrides from kwargs
                 overrides: dict[str, Any] = {}
@@ -534,7 +534,7 @@ def inject(
 
                 return await fn(**new_kwargs)
 
-            return tcast(Callable[P, R], async_wrapper)
+            return cast(Callable[P, R], async_wrapper)
 
         else:
 
@@ -553,7 +553,7 @@ def inject(
                 nonlocal container
                 if container is None:
                     from .injection import get_default_container as _gdc
-                    container = tcast(Resolvable[Any], _gdc())
+                    container = _gdc()
 
                 # Extract overrides from kwargs
                 overrides: dict[str, Any] = {}
@@ -579,17 +579,17 @@ def inject(
 
                 return fn(**new_kwargs)
 
-            return tcast(Callable[P, R], sync_wrapper)
+            return cast(Callable[P, R], sync_wrapper)
 
     # Handle both @inject and @inject(...) syntax
     if func is None:
         # Called with parameters: @inject(container=...)
-        return decorator
+        return cast(Callable[[Callable[P, R]], Callable[P, R]], decorator)
     else:
         # Called without parameters: @inject
-        return decorator(func)
+        return cast(Callable[P, R], decorator(cast(Callable[P, R], func)))
 def get_default_container() -> Resolvable[Any]:
     """Indirection for default container lookup (patchable in tests)."""
     from .container import get_default_container as _gdc
 
-    return tcast(Resolvable[Any], _gdc())
+    return _gdc()

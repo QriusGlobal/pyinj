@@ -185,21 +185,17 @@ class Container(ContextualContainer):
     def _coerce_to_token(self, spec: Token[U] | type[U]) -> Token[U]:
         if isinstance(spec, Token):
             return spec
-        if isinstance(spec, type):
-            found = self._type_index.get(cast(type[object], spec))
-            if found is not None:
-                return cast(Token[U], found)
-            for registered in self._providers:
-                if registered.type_ == spec:
-                    return cast(Token[U], registered)
-            for registered in self._singletons:
-                if registered.type_ == spec:
-                    return cast(Token[U], registered)
-            return Token(spec.__name__, spec)
-        # Disallow string-based tokens for type safety
-        raise TypeError(
-            "Token specification must be a Token or type; strings are not supported"
-        )
+        # else: spec is a type[T]
+        found = self._type_index.get(cast(type[object], spec))
+        if found is not None:
+            return cast(Token[U], found)
+        for registered in self._providers:
+            if registered.type_ == spec:
+                return cast(Token[U], registered)
+        for registered in self._singletons:
+            if registered.type_ == spec:
+                return cast(Token[U], registered)
+        return Token(spec.__name__, spec)
 
     def _get_override(self, token: Token[U]) -> U | None:
         current = self._overrides.get()
@@ -246,19 +242,21 @@ class Container(ContextualContainer):
             container.register(Token[DB]("db"), create_db, scope=Scope.SINGLETON)
         """
         # Validate token type
-        if not isinstance(token, (Token, type)):
+        if not isinstance(token, Token) and not isinstance(token, type):
             raise TypeError(
                 "Token specification must be a Token or type; strings are not supported"
             )
 
         # Convert to Token if needed
-        if isinstance(token, type):
+        if isinstance(token, Token):
+            if scope is not None:
+                # Record desired scope without changing the token identity
+                self._token_scopes[cast(Token[object], token)] = scope
+        else:
+            # token is a type
             token = self.tokens.create(
                 token.__name__, token, scope=scope or Scope.TRANSIENT, tags=tags
             )
-        elif scope is not None:
-            # Record desired scope without changing the token identity
-            self._token_scopes[cast(Token[object], token)] = scope
 
         # Validate provider
         if not callable(provider):
@@ -340,15 +338,16 @@ class Container(ContextualContainer):
         singletons.
         """
         # Validate token
-        if not isinstance(token, (Token, type)):
+        if not isinstance(token, Token) and not isinstance(token, type):
             raise TypeError(
                 "Token specification must be a Token or type; strings are not supported"
             )
         # To token
-        if isinstance(token, type):
+        if isinstance(token, Token):
+            if scope is not None:
+                self._token_scopes[cast(Token[object], token)] = scope
+        else:
             token = self.tokens.create(token.__name__, token, scope=scope or Scope.TRANSIENT)
-        elif scope is not None:
-            self._token_scopes[cast(Token[object], token)] = scope
 
         if not callable(cm_provider):
             raise TypeError("cm_provider must be callable and return a (async) context manager")
@@ -544,7 +543,7 @@ class Container(ContextualContainer):
             ResolutionError: If no provider is registered or resolution fails.
         """
         # Convert to token if needed and handle givens
-        if isinstance(token, type):
+        if not isinstance(token, Token):
             given = self.resolve_given(token)
             if given is not None:
                 return given
@@ -583,7 +582,7 @@ class Container(ContextualContainer):
                         cached = self._get_singleton_cached(token)
                         if cached is not None:
                             return cached
-                        cm = reg.provider()
+                        cm = cast(ContextManager[U], reg.provider())
                         value = cm.__enter__()
                         self._set_singleton_cached(token, value)
                         # schedule cleanup
@@ -591,7 +590,7 @@ class Container(ContextualContainer):
                         self._resources.append(value)
                         return cast(U, value)
                 else:
-                    cm = reg.provider()
+                    cm = cast(ContextManager[U], reg.provider())
                     value = cm.__enter__()
                     self.store_in_context(token, value)
                     # register per-scope cleanup
@@ -672,14 +671,14 @@ class Container(ContextualContainer):
                         cached = self._get_singleton_cached(token)
                         if cached is not None:
                             return cached
-                        cm = reg.provider()
+                        cm = cast(AsyncContextManager[U], reg.provider())
                         value = await cm.__aenter__()
                         self._set_singleton_cached(token, value)
                         self._singleton_cleanup_async.append(lambda cm=cm: cm.__aexit__(None, None, None))
                         self._resources.append(value)
                         return cast(U, value)
                 else:
-                    cm = reg.provider()
+                    cm = cast(AsyncContextManager[U], reg.provider())
                     value = await cm.__aenter__()
                     self.store_in_context(token, value)
                     if effective_scope == Scope.REQUEST:
