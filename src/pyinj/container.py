@@ -230,7 +230,11 @@ class Container(ContextualContainer):
         Example:
             container.register(Token[DB]("db"), create_db, scope=Scope.SINGLETON)
         """
-        # Token validation is implicit in the type signature
+        # Validate token type to provide clear error message
+        if not isinstance(token, (Token, type)):
+            raise TypeError(
+                "Token specification must be a Token or type; strings are not supported"
+            )
 
         # Convert to Token if needed
         if isinstance(token, Token):
@@ -324,7 +328,11 @@ class Container(ContextualContainer):
         exited during scope cleanup (request/session), or on container close for
         singletons.
         """
-        # Token validation is implicit in the type signature
+        # Validate token type to provide clear error message
+        if not isinstance(token, (Token, type)):
+            raise TypeError(
+                "Token specification must be a Token or type; strings are not supported"
+            )
         # To token
         if isinstance(token, Token):
             if scope is not None:
