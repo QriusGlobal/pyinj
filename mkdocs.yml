@@ -1,5 +1,5 @@
 site_name: PyInj
-site_description: Type-safe dependency injection for Python 3.13+ (beta)
+site_description: Type-safe dependency injection for Python 3.13+
 site_url: https://qriusglobal.github.io/pyinj/
 repo_url: https://github.com/QriusGlobal/pyinj
 repo_name: QriusGlobal/pyinj
