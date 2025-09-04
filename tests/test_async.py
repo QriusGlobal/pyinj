@@ -318,5 +318,6 @@ class TestAsyncInjection:
         container.register(token_a, provider_a)
         container.register(token_b, provider_b)
 
-        with pytest.raises(ResolutionError):  # Should be CircularDependencyError
+        from pyinj.exceptions import CircularDependencyError
+        with pytest.raises(CircularDependencyError):
             await container.aget(token_a)

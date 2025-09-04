@@ -75,6 +75,8 @@ with container.request_scope():
     assert container.get(REQUEST)["r"] == 1
     with container.request_scope():
         assert container.get(REQUEST)["r"] == 1  # new dict in inner scope
+
+Note: nested `request_scope` blocks are fully isolated; the inner scope does not inherit the parent request cache. This ensures deterministic lifetimes for per-request values.
 ```
 
 ## Overrides per request
