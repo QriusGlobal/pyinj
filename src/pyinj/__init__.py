@@ -28,7 +28,7 @@ from pyinj.injection import Depends, Given, Inject, inject
 from pyinj.metaclasses import Injectable
 from pyinj.tokens import Scope, Token, TokenFactory
 
-__version__ = "1.0.1b1"
+__version__ = "1.1.1"
 __author__ = "Qrius Global"
 
 __all__ = [

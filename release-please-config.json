@@ -5,8 +5,13 @@
     ".": {
       "release-type": "python",
       "changelog-path": "CHANGELOG.md",
-      "version-file": "pyproject.toml"
+      "version-file": "pyproject.toml",
+      "extra-files": [
+        {
+          "type": "python",
+          "path": "src/pyinj/__init__.py"
+        }
+      ]
     }
   }
 }
-
