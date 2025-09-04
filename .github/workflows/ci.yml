@@ -68,11 +68,21 @@ jobs:
         run: |
           uv pip install -e .[dev]
 
-      - name: Tests (pytest)
+      - name: Tests with coverage (pytest-cov)
         env:
           PYTHONPATH: src
         run: |
-          uv run pytest -q
+          uv pip install pytest-cov
+          uv run pytest --cov=src --cov-report=xml -q
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage.xml
+          flags: unittests
+          fail_ci_if_error: false
+          verbose: false
+          token: ${{ secrets.CODECOV_TOKEN }}
 
   docs:
     runs-on: ubuntu-latest
