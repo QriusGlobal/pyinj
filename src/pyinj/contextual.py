@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from collections import ChainMap
+import inspect
 from collections.abc import AsyncIterator, Iterator
 from contextlib import asynccontextmanager, contextmanager
 from contextvars import ContextVar
@@ -142,8 +143,20 @@ class ContextualContainer:
         """
         for resource in reversed(list(cache.values())):
             try:
-                if hasattr(resource, "close"):
-                    resource.close()
+                # Early fail if async cleanup is required in a sync context
+                if hasattr(resource, "aclose") or hasattr(resource, "__aexit__"):
+                    raise RuntimeError(
+                        f"Resource {type(resource).__name__} requires async cleanup; "
+                        f"use an async request/session scope"
+                    )
+                close = getattr(resource, "close", None)
+                if close is not None and inspect.iscoroutinefunction(close):
+                    raise RuntimeError(
+                        f"Resource {type(resource).__name__}.close() is async; "
+                        f"use an async request/session scope"
+                    )
+                if close is not None:
+                    close()
                 elif hasattr(resource, "__exit__"):
                     resource.__exit__(None, None, None)
             except Exception:
@@ -158,16 +171,23 @@ class ContextualContainer:
             cache: Cache of resources to clean up
         """
         tasks: list[Any] = []
+        loop = asyncio.get_running_loop()
 
         for resource in reversed(list(cache.values())):
-            if hasattr(resource, "aclose"):
-                tasks.append(resource.aclose())
-            elif hasattr(resource, "__aexit__"):
-                tasks.append(resource.__aexit__(None, None, None))
-            elif hasattr(resource, "close"):
-                # Sync cleanup in executor
-                loop = asyncio.get_event_loop()
-                tasks.append(loop.run_in_executor(None, resource.close))
+            aclose = getattr(resource, "aclose", None)
+            if aclose and inspect.iscoroutinefunction(aclose):
+                tasks.append(aclose())
+                continue
+            aexit = getattr(resource, "__aexit__", None)
+            if aexit and inspect.iscoroutinefunction(aexit):
+                tasks.append(aexit(None, None, None))
+                continue
+            close = getattr(resource, "close", None)
+            if close:
+                if inspect.iscoroutinefunction(close):
+                    tasks.append(close())
+                else:
+                    tasks.append(loop.run_in_executor(None, close))
 
         if tasks:
             # Gather with return_exceptions to prevent one failure from stopping others

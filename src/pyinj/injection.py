@@ -83,7 +83,7 @@ class Inject(Generic[T]):
         """
         cached = cls._typed_cache.get(item)
         if cached is not None:
-            return tcast(builtins.type[Inject[T]], cached)
+            return cached
 
         name = f"Inject_{getattr(item, '__name__', 'T')}"
         TypedInject = type(name, (cls,), {"_inject_type": item})
@@ -196,7 +196,7 @@ def analyze_dependencies(func: Callable[..., Any]) -> dict[str, DependencyReques
             metadata = args[1:]
             for meta in metadata:
                 if isinstance(meta, Inject):
-                    marker = cast(Inject, meta)
+                    marker = cast(Inject[Any], meta)
                     if not marker.type and isinstance(dep_type, type):
                         marker.set_type(dep_type)
                     deps[name] = marker
@@ -211,7 +211,7 @@ def analyze_dependencies(func: Callable[..., Any]) -> dict[str, DependencyReques
 
         elif isinstance(param.default, Inject):
             # Default value is Inject()
-            marker = cast(Inject, param.default)
+            marker = cast(Inject[Any], param.default)
             deps[name] = marker
             if annotation != Parameter.empty and isinstance(annotation, type):
                 # Store the type from annotation
@@ -301,7 +301,7 @@ def _extract_inject_spec(
     if default is Parameter.empty:
         return type_ or annotation
     if isinstance(default, Inject):
-        marker = cast(Inject, default)
+        marker = cast(Inject[Any], default)
         if type_ and not marker.type:
             marker.set_type(type_)
         return marker

@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import threading
 from collections import defaultdict, deque
+import inspect
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar
@@ -27,6 +28,11 @@ U = TypeVar("U")
 
 # Global default container
 _default_container: Container | None = None
+
+# Task-local resolution stack to avoid false circular detection across asyncio tasks
+_resolution_stack: ContextVar[tuple[Token[Any], ...]] = ContextVar(
+    "pyinj_resolution_stack", default=()
+)
 
 
 def get_default_container() -> Container:
@@ -99,8 +105,7 @@ class Container(ContextualContainer):
             default=None,
         )
 
-        # Thread-local resolution tracking for cycle detection
-        self._local = threading.local()
+        # Resolution stack is tracked via ContextVar (task-local)
 
     # ============= Internal Helpers (Phase 1) =============
 
@@ -125,24 +130,16 @@ class Container(ContextualContainer):
                 return cast(U, val)
         return None
 
-    def _resolution_stack(self) -> list[Token[object]]:
-        stack = getattr(self._local, "resolving", None)
-        if not isinstance(stack, list):
-            new_stack: list[Token[object]] = []
-            self._local.resolving = new_stack
-            return new_stack
-        return cast(list[Token[object]], stack)
-
     @contextmanager
     def _resolution_guard(self, token: Token[Any]):
-        stack = self._resolution_stack()
+        stack = _resolution_stack.get()
         if token in stack:
             raise CircularDependencyError(token, list(stack))
-        stack.append(token)
+        reset_token = _resolution_stack.set(stack + (token,))
         try:
             yield
         finally:
-            stack.pop()
+            _resolution_stack.reset(reset_token)
 
     # ============= Registration Methods =============
 
@@ -543,8 +540,20 @@ class Container(ContextualContainer):
     ) -> None:  # pragma: no cover - trivial
         for resource in reversed(self._resources):
             try:
-                if isinstance(resource, SupportsClose):
-                    resource.close()
+                # If resource exposes async cleanup, fail fast in sync context
+                if hasattr(resource, "aclose") or hasattr(resource, "__aexit__"):
+                    raise RuntimeError(
+                        f"Resource {type(resource).__name__} requires async cleanup; "
+                        f"use 'await container.aclose()' or an async scope"
+                    )
+                close = getattr(resource, "close", None)
+                if close is not None and inspect.iscoroutinefunction(close):
+                    raise RuntimeError(
+                        f"Resource {type(resource).__name__}.close() is async; "
+                        f"use 'await container.aclose()' or an async scope"
+                    )
+                if close is not None:
+                    close()
             except Exception:
                 pass
 
@@ -557,10 +566,23 @@ class Container(ContextualContainer):
         exc_val: BaseException | None,
         exc_tb: TracebackType | None,
     ) -> None:  # pragma: no cover - trivial
-        tasks: list[asyncio.Task[None]] = []
+        tasks: list[asyncio.Future[None] | asyncio.Task[None]] = []
+        loop = asyncio.get_running_loop()
         for resource in reversed(self._resources):
-            if isinstance(resource, SupportsAsyncClose):
-                tasks.append(asyncio.create_task(resource.aclose()))
+            aclose = getattr(resource, "aclose", None)
+            if aclose and inspect.iscoroutinefunction(aclose):
+                tasks.append(asyncio.create_task(aclose()))
+                continue
+            aexit = getattr(resource, "__aexit__", None)
+            if aexit and inspect.iscoroutinefunction(aexit):
+                tasks.append(asyncio.create_task(aexit(None, None, None)))
+                continue
+            close = getattr(resource, "close", None)
+            if close:
+                if inspect.iscoroutinefunction(close):
+                    tasks.append(asyncio.create_task(close()))
+                else:
+                    tasks.append(loop.run_in_executor(None, close))
         if tasks:
             await asyncio.gather(*tasks, return_exceptions=True)
 
