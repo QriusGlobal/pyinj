@@ -2,34 +2,46 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://qriusglobal.github.io/pyinj/next/</loc>
-         <lastmod>2025-09-03</lastmod>
+         <lastmod>2025-09-06</lastmod>
     </url>
     <url>
          <loc>https://qriusglobal.github.io/pyinj/next/advanced/</loc>
-         <lastmod>2025-09-03</lastmod>
+         <lastmod>2025-09-06</lastmod>
     </url>
     <url>
          <loc>https://qriusglobal.github.io/pyinj/next/api/</loc>
-         <lastmod>2025-09-03</lastmod>
+         <lastmod>2025-09-06</lastmod>
+    </url>
+    <url>
+         <loc>https://qriusglobal.github.io/pyinj/next/concurrency/</loc>
+         <lastmod>2025-09-06</lastmod>
     </url>
     <url>
          <loc>https://qriusglobal.github.io/pyinj/next/contributing/</loc>
-         <lastmod>2025-09-03</lastmod>
+         <lastmod>2025-09-06</lastmod>
     </url>
     <url>
          <loc>https://qriusglobal.github.io/pyinj/next/getting-started/</loc>
-         <lastmod>2025-09-03</lastmod>
+         <lastmod>2025-09-06</lastmod>
+    </url>
+    <url>
+         <loc>https://qriusglobal.github.io/pyinj/next/internals/</loc>
+         <lastmod>2025-09-06</lastmod>
+    </url>
+    <url>
+         <loc>https://qriusglobal.github.io/pyinj/next/llm/</loc>
+         <lastmod>2025-09-06</lastmod>
     </url>
     <url>
          <loc>https://qriusglobal.github.io/pyinj/next/performance/</loc>
-         <lastmod>2025-09-03</lastmod>
+         <lastmod>2025-09-06</lastmod>
     </url>
     <url>
          <loc>https://qriusglobal.github.io/pyinj/next/releases/</loc>
-         <lastmod>2025-09-03</lastmod>
+         <lastmod>2025-09-06</lastmod>
     </url>
     <url>
          <loc>https://qriusglobal.github.io/pyinj/next/usage/</loc>
-         <lastmod>2025-09-03</lastmod>
+         <lastmod>2025-09-06</lastmod>
     </url>
 </urlset>
