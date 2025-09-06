@@ -1,56 +1,233 @@
-Project maintenance and release notes
+# PyInj - Project Context and Maintenance Guide
 
-Overview
-- This project provides a type-safe DI container for Python 3.13+.
-- Tokens are strictly typed: only `Token` or `type` are allowed; string tokens are not supported.
-- Scopes are orchestrated by `ScopeManager` (contextvars-backed, async-safe).
-- Injection analysis is centralized via `InjectionAnalyzer` and cached `analyze_dependencies`.
-- Resolution utilities accept any container implementing the `Resolvable[T]` protocol.
+## Project Overview
 
-Repository conventions
-- Source: `src/pyinj/`
-- Tests: `tests/`
-- Package typing marker: `src/pyinj/py.typed`
-- Single distribution name: `pyinj`
+PyInj is a type-safe dependency injection container for Python 3.13+, designed with production reliability and performance as primary goals. The library provides compile-time type safety, O(1) lookup performance, and zero external dependencies.
 
-Release process (uv-native)
-1) Set version and classifiers (pyproject and package):
-   - Edit `pyproject.toml` → `[project].version` (use SemVer; add `a/b/rc` for pre-releases).
-   - Edit `src/pyinj/__init__.py` → `__version__` to match.
-   - For in-development status, use classifier: `Development Status :: 4 - Beta`.
+### Core Value Proposition
+- **Minimal complexity**: ~200 lines of core implementation
+- **Type safety**: Full static type checking with protocols and generics
+- **Performance**: Constant-time lookups via pre-computed token hashes
+- **Async-safe**: ContextVar-based isolation for concurrent execution
+- **Zero dependencies**: No external packages required
 
-2) Build artifacts locally:
-   - `rm -rf dist`
-   - `uv build`
+### Target Use Cases
+1. Modern Python applications requiring dependency injection
+2. FastAPI/Django/Flask service layer organization
+3. Testing with dependency overrides
+4. Async-first architectures with proper resource cleanup
+5. Multi-tenant applications with request/session scoping
 
-3) Publish to PyPI with token:
-   - Ensure `PYPI_API_TOKEN` is available.
-   - `uv publish --token "$PYPI_API_TOKEN"`
+## Architecture & Design Principles
 
-4) CI/CD with GitHub Actions:
-   - `.github/workflows/ci.yml` uses `astral-sh/setup-uv@v4`, installs with `uv pip` and runs `uv run pytest`.
-   - `.github/workflows/publish.yml` clears `dist/`, runs `uv build`, and publishes via `uv publish --token $PYPI_API_TOKEN`.
-   - Alternative: switch to Trusted Publishing (OIDC) by enabling PyPI trusted publishers and setting `--trusted-publishing` in `uv publish` or using the workflow’s OIDC context.
+### Type System Architecture
+- **Token-based resolution**: Strongly typed tokens (`Token[T]`) as container keys
+- **Protocol-driven design**: `Resolvable[T]` protocol for container abstraction
+- **Generic type preservation**: Full type inference through decorator chains
+- **No string fallbacks**: Explicit rejection of string-based tokens for type safety
 
-PyPI policies to remember
-- PyPI does not allow overwriting a version. Once uploaded, that version number can’t be reused.
-- Yanking is the correct way to deprecate a bad release. Do this from the PyPI web UI (no official API/CLI for yank at this time).
-- Project URLs in the sidebar come from `[project.urls]` in `pyproject.toml`.
-- README rendering: use structured `readme = { file = "README.md", content-type = "text/markdown" }`.
+### Performance Architecture
+- **O(1) lookups**: Pre-computed hash values on Token instances
+- **Cached metadata**: Function signatures analyzed once at decoration time
+- **Lock-free fast paths**: Double-checked locking for singleton initialization
+- **Memory efficient**: ~500 bytes overhead per registered service
 
-Recent changes (this iteration)
-- Removed string-token fallback; API is strictly `Token` or `type`.
-- Extracted scope handling into `ScopeManager` and delegated from `ContextualContainer`.
-- Completed `InjectionAnalyzer` pipeline usage in injection decorator.
-- Strengthened typing with `Resolvable` protocol in `protocols.py` and used in resolve functions.
-- Tests updated to avoid strings and to assert correct exception types.
-- `py.typed` moved under `src/pyinj/` and included in wheels/sdists via Hatch config.
-- Version updated and metadata expanded (URLs, classifiers).
-- Added uv-based CI and publish workflows. Publish workflow now clears `dist/` before building.
+### Concurrency Model
+- **ContextVar isolation**: Thread-safe and async-safe by default
+- **Scope hierarchy**: Container → Session → Request with proper isolation
+- **LIFO cleanup**: Resources cleaned up in reverse registration order
+- **Circuit breaker**: Early failure for async resources in sync contexts
 
-Operational tips
-- Prefer tokens from `TokenFactory` or `Token(name, type_)` for clarity.
-- Avoid registering async providers for sync `get()`; prefer `aget()` or wrap appropriately.
-- Use `use_overrides()` for scoped overrides in tests.
-- For semver pre-releases, use `1.0.1b1` (beta) or `1.0.1rc1` (release-candidate). Finalize with `1.0.1`.
+## Repository Structure
 
+```
+pyinj/
+├── src/pyinj/              # Source code
+│   ├── __init__.py         # Public API exports
+│   ├── container.py        # Core container implementation
+│   ├── contextual.py       # Scoped containers (Request/Session)
+│   ├── tokens.py           # Token and Scope definitions
+│   ├── injection.py        # Decorator and injection logic
+│   ├── analyzer.py         # Dependency analysis
+│   ├── scope_manager.py    # ContextVar-based scope orchestration
+│   ├── protocols/          # Protocol definitions
+│   └── py.typed            # PEP 561 type marker
+├── tests/                  # Test suite
+├── docs/                   # MkDocs documentation
+├── .github/workflows/      # CI/CD pipelines
+├── pyproject.toml          # Package configuration
+└── CLAUDE.md              # This file
+```
+
+### Key Files
+- `pyproject.toml`: Package metadata, dependencies, tool configuration
+- `src/pyinj/__init__.py`: Version string and public API
+- `.github/workflows/ci.yml`: Quality gates (format, lint, type, test)
+- `.github/workflows/publish.yml`: PyPI publishing via OIDC
+- `release-please-config.json`: Automated release configuration
+
+## Development Workflow
+
+### Trunk-Based Development
+- **Single long-lived branch**: `main` is always deployable
+- **Feature branches**: Short-lived, merged via squash PRs
+- **No release branches**: Direct releases from `main` via tags
+- **Linear history**: Squash merges maintain clean commit history
+
+### CI Pipeline (Deterministic Order)
+1. **Format check**: `ruff format --check src` (no auto-fix)
+2. **Lint**: `ruff check src` (comprehensive rule set)
+3. **Type check**: `basedpyright src` (strict mode)
+4. **Tests**: `pytest` with coverage reporting
+5. **Docs build**: `mkdocs build` (parallel job)
+
+### Quality Requirements
+- Type checking: BasedPyright strict mode must pass
+- Code formatting: Ruff-formatted (88 char lines)
+- Test coverage: Maintained but not strictly enforced
+- Documentation: All public APIs documented
+
+## Release Strategy
+
+### Release Automation
+- **Release Please**: Google's automated release management
+- **Conventional Commits**: Semantic versioning from commit messages
+- **Automated changelog**: Generated from commit history
+- **Direct from main**: No separate release branches needed
+
+### Version Management
+- **SemVer compliance**: MAJOR.MINOR.PATCH versioning
+- **Pre-release tags**: `a` (alpha), `b` (beta), `rc` (release candidate)
+- **Version locations**:
+  - `pyproject.toml`: `[project].version`
+  - `src/pyinj/__init__.py`: `__version__`
+  - `.release-please-manifest.json`: Current version tracker
+
+### Publishing Process
+1. Conventional commits accumulate on `main`
+2. Release Please creates PR with version bumps
+3. Merging PR creates GitHub Release and tag
+4. Tag triggers publish workflow (OIDC trusted publishing)
+5. Package published to PyPI automatically
+
+### PyPI Considerations
+- **Immutable versions**: Cannot overwrite published versions
+- **Yanking**: Use PyPI web UI to deprecate bad releases
+- **Trusted Publishing**: OIDC-based, no token storage
+- **Project URLs**: Sourced from `[project.urls]` in pyproject.toml
+
+## Technical Constraints
+
+### Runtime Requirements
+- **Python 3.13+**: Required for latest typing features
+- **No GIL support**: Designed for Python's no-GIL future
+- **Zero dependencies**: No external packages in production
+
+### Type Safety Invariants
+- Tokens must be `Token[T]` instances or types
+- No string-based token resolution
+- All public APIs fully typed
+- Protocol compliance enforced
+
+### Performance Guarantees
+- O(1) token lookup complexity
+- Singleton initialization thread-safe
+- No memory leaks in scoped resources
+- Cleanup always LIFO ordered
+
+## API Design Principles
+
+### Token Design
+- **Immutable**: Tokens are hashable and reusable
+- **Generic**: `Token[T]` preserves type information
+- **Explicit**: No implicit string-to-token conversion
+
+### Scope Hierarchy
+```
+SINGLETON    # Container lifetime
+SESSION      # Session context lifetime  
+REQUEST      # Request context lifetime
+TRANSIENT    # New instance each resolution
+```
+
+### Injection Patterns
+- **Decorator-based**: `@inject` for automatic resolution
+- **Type-driven**: Resolution based on type annotations
+- **Override support**: Scoped overrides for testing
+- **Protocol resolution**: Support for protocol-based dependencies
+
+### Error Handling
+- **Clear error messages**: Full resolution chain in errors
+- **Early failure**: Type mismatches caught immediately
+- **Circular detection**: Prevents infinite recursion
+- **Async safety**: AsyncCleanupRequiredError for context mismatches
+
+## Testing Patterns
+
+### Override Mechanisms
+- `container.override()`: Temporary replacements
+- `container.use_overrides()`: Context-managed overrides
+- Scoped overrides: Per-request test isolation
+
+### Resource Management
+- Context managers for cleanup testing
+- Async cleanup verification
+- Memory leak detection patterns
+- Thread safety validation
+
+## Migration Notes
+
+### From Other DI Libraries
+- **dependency-injector**: Use Token instead of providers
+- **injector**: Replace decorators with `@inject`
+- **No auto-wiring**: Explicit registration required
+
+### Breaking Changes
+- v1.1.0: Removed string token support
+- v1.1.0: Immutable registrations (no re-registration)
+- v1.1.0: Context-managed resources via `register_context`
+
+## Operational Guidelines
+
+### Best Practices
+1. Use `TokenFactory` for consistent token creation
+2. Prefer singleton scope for stateless services
+3. Register async providers for async resolution only
+4. Use context managers for resource cleanup
+5. Test with scoped overrides, not global mutations
+
+### Common Pitfalls
+- Registering async providers for sync `get()` calls
+- Missing cleanup for resources with lifecycle
+- Circular dependencies in singleton providers
+- Type mismatches in protocol implementations
+
+### Performance Tips
+- Pre-create tokens at module level
+- Use singleton scope for expensive objects
+- Avoid transient scope for frequently accessed services
+- Cache injection metadata with `@inject` decorator
+
+## Maintenance Notes
+
+### Release Checklist
+1. Ensure CI passes on main
+2. Version already updated by Release Please
+3. Tag created automatically on PR merge
+4. PyPI publication automatic via OIDC
+
+### Documentation Updates
+- Public API changes require docstring updates
+- Architectural changes update this file
+- User-facing changes update README.md
+- Breaking changes noted in CHANGELOG.md
+
+### Quality Maintenance
+- Keep core implementation under 300 lines
+- Maintain zero production dependencies
+- Ensure O(1) lookup performance
+- Preserve full type safety
+
+---
+
+*This document serves as the authoritative reference for PyInj's architecture, design decisions, and maintenance procedures. It should be updated whenever significant architectural decisions are made or development processes change.*
