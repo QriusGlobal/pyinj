@@ -30,6 +30,8 @@ wheels/
 .cache
 .pytest_cache/
 htmlcov/
+coverage.json
+coverage_annotated/
 
 # Virtual environments
 venv/
