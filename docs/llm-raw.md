@@ -1,18 +1,23 @@
-# LLM Raw Markdown Access
+# LLM Documentation Access
 
-For LLM tools and agents that need direct access to PyInj documentation as raw markdown without HTML processing, use this direct GitHub raw content link:
+For LLM tools and agents that need direct access to PyInj documentation, we provide the standard `llms.txt` endpoint:
 
-**Raw Markdown URL:**
+**Standard LLM Endpoint:**
+```
+https://qriusglobal.github.io/pyinj/llms.txt
+```
+
+This follows the `llms.txt` standard and provides:
+- Comprehensive PyInj documentation in plain text
+- No HTML wrapper, CSS, or JavaScript processing
+- Direct HTTP GET access optimized for LLM consumption
+- Complete usage patterns, examples, and best practices
+- Framework integration guides and migration documentation
+
+**Alternative GitHub Raw:**
 ```
 https://raw.githubusercontent.com/QriusGlobal/pyinj/main/docs/llm.md
 ```
-
-This endpoint provides:
-- Pure markdown content without HTML wrapper
-- No CSS or JavaScript processing  
-- Direct HTTP GET access for LLM consumption
-- Content-Type: text/plain
-- Concise PyInj integration guide (<10k tokens)
 
 ## Alternative: Copy Raw Content Below
 

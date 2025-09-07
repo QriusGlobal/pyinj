@@ -8,8 +8,12 @@ echo "Copying raw markdown files..."
 mkdir -p site/raw
 cp raw/*.md site/raw/ 2>/dev/null || echo "No raw markdown files found"
 
+echo "Copying llms.txt to site root..."
+cp llms.txt site/llms.txt
+
 echo "Deploying to GitHub Pages..."
 uvx --with mkdocs-material mkdocs gh-deploy --force --ignore-version
 
 echo "✅ Documentation deployed successfully!"
-echo "Raw LLM guide available at: https://qriusglobal.github.io/pyinj/raw/llm-guide.md"
+echo "📖 Documentation site: https://qriusglobal.github.io/pyinj/"
+echo "🤖 LLM standard endpoint: https://qriusglobal.github.io/pyinj/llms.txt"
