@@ -9,30 +9,26 @@
 
 ## Project Status
 
-| Project | Status |
-| --- | --- |
-| CI/CD | [![Latest Release](https://img.shields.io/github/v/release/QriusGlobal/pyinj?display_name=tag&sort=semver&label=latest%20release&logo=github)](https://github.com/QriusGlobal/pyinj/releases) [![Tests & Linting](https://github.com/QriusGlobal/pyinj/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/QriusGlobal/pyinj/actions/workflows/ci.yml) [![Docs Build](https://github.com/QriusGlobal/pyinj/actions/workflows/docs.yml/badge.svg?branch=main)](https://github.com/QriusGlobal/pyinj/actions/workflows/docs.yml) |
-| Quality | [![codecov](https://codecov.io/gh/QriusGlobal/pyinj/branch/main/graph/badge.svg)](https://codecov.io/gh/QriusGlobal/pyinj) [![Quality Gate](https://img.shields.io/badge/quality%20gate-not%20configured-lightgrey?logo=sonarqube&logoColor=white)](#) [![Maintainability](https://img.shields.io/badge/maintainability-N%2FA-lightgrey)](#) [![Reliability](https://img.shields.io/badge/reliability-N%2FA-lightgrey)](#) [![Security](https://img.shields.io/badge/security-N%2FA-lightgrey)](#) |
-| Package | [![PyPI](https://img.shields.io/pypi/v/pyinj.svg?logo=pypi&label=PyPI)](https://pypi.org/project/pyinj/) [![Python Versions](https://img.shields.io/pypi/pyversions/pyinj.svg?logo=python&logoColor=white)](https://pypi.org/project/pyinj/) |
-| Community | [![Discord](https://img.shields.io/badge/discord-join-grey?logo=discord)](#) [![Matrix](https://img.shields.io/badge/matrix-join-grey?logo=matrix)](#) [![Medium](https://img.shields.io/badge/medium-read-grey?logo=medium)](#) [![X](https://img.shields.io/badge/X-follow-grey?logo=x)](#) [![Blog](https://img.shields.io/badge/blog-read-grey?logo=blogger)](#) |
-| Meta | [![License MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](https://opensource.org/licenses/MIT) [![Typing: strict](https://img.shields.io/badge/typing-strict-blue?logo=python)](#) [![Linting: Ruff](https://img.shields.io/badge/linting-ruff-46a2f1?logo=ruff&logoColor=white)](https://docs.astral.sh/ruff/) [![Code Style: Ruff](https://img.shields.io/badge/code%20style-ruff-46a2f1?logo=ruff&logoColor=white)](https://docs.astral.sh/ruff/formatter/) |
-
-## Stability
-
-- Beta quality: APIs are stabilizing and may change.
-- Expect breaking changes between pre-releases (a/b/rc).
-- Pin exact versions if needed in production, e.g. `pyinj==1.0.1b1`.
-- Review release notes before upgrading.
+[![PyPI Version](https://img.shields.io/pypi/v/pyinj.svg?logo=pypi&label=PyPI)](https://pypi.org/project/pyinj/)
+[![Python Versions](https://img.shields.io/pypi/pyversions/pyinj.svg?logo=python&logoColor=white)](https://pypi.org/project/pyinj/)
+[![Tests & Linting](https://github.com/QriusGlobal/pyinj/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/QriusGlobal/pyinj/actions/workflows/ci.yml)
+[![Docs Build](https://github.com/QriusGlobal/pyinj/actions/workflows/docs.yml/badge.svg?branch=main)](https://github.com/QriusGlobal/pyinj/actions/workflows/docs.yml)
+[![codecov](https://codecov.io/gh/QriusGlobal/pyinj/branch/main/graph/badge.svg)](https://codecov.io/gh/QriusGlobal/pyinj)
+[![License MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Typing: strict](https://img.shields.io/badge/typing-strict-blue?logo=python)](#)
+[![Linting: Ruff](https://img.shields.io/badge/linting-ruff-46a2f1?logo=ruff&logoColor=white)](https://docs.astral.sh/ruff/)
+[![Code Style: Ruff](https://img.shields.io/badge/code%20style-ruff-46a2f1?logo=ruff&logoColor=white)](https://docs.astral.sh/ruff/formatter/)
 
 A **type-safe** dependency injection container for Python 3.13+ that provides:
 
 - 🚀 **Thread-safe and async-safe** resolution (ContextVar-based; no cross-talk)  
-- ⚡ **O(1) performance** for type lookups
-- 🔍 **Circular dependency detection**
-- 🧹 **Automatic resource cleanup**
-- 🛡️ **Protocol-based type safety**
-- 🏭 **Metaclass auto-registration**
-- 📦 **Zero external dependencies**
+- ⚡ **O(1) performance** for type lookups with pre-computed hash tokens
+- 🔍 **Circular dependency detection** with detailed error chains
+- 🧹 **Automatic resource cleanup** (LIFO order with proper async support)
+- 🛡️ **Protocol-based type safety** with full static type checking
+- 🏭 **Metaclass auto-registration** for declarative DI patterns
+- 📦 **Zero external dependencies** - pure Python implementation
+- 🎯 **PEP 561 compliant** with `py.typed` for mypy/basedpyright support
 
 ## Documentation
 
@@ -48,354 +44,887 @@ uv add pyinj
 pip install pyinj
 ```
 
-```python
-from pyinj import Container, Token, Scope
-
-# Create container
-container = Container()
-
-# Define token
-DB_TOKEN = Token[Database]("database")
-
-# Register provider
-container.register(DB_TOKEN, create_database, Scope.SINGLETON)
-
-# Resolve dependency
-db = container.get(DB_TOKEN)
-
-# Cleanup
-await container.dispose()
-```
-
-## Why PyInj?
-
-**Traditional DI libraries are over-engineered:**
-- 20,000+ lines of code for simple dependency injection
-- Heavy frameworks with steep learning curves  
-- Poor async support and race conditions
-- Memory leaks and thread safety issues
-
-**PyInj is different:**
-- ~200 lines of pure Python - easy to understand and debug
-- Designed specifically for Python 3.13+ with no-GIL support
-- Production-focused design patterns; currently stabilizing in beta
-- Can be vendored directly or installed as a package
-
-## Core Features
-
-### 1. Type-Safe Dependencies
+### Basic Usage (Recommended Pattern)
 
 ```python
-from typing import Protocol, runtime_checkable
-from pyinj import Container, Token
+from typing import Protocol
+from pyinj import Container, Token, Scope, inject
 
-@runtime_checkable
+# Define interfaces
 class Logger(Protocol):
     def info(self, message: str) -> None: ...
 
+class Database(Protocol):
+    def query(self, sql: str) -> list[dict[str, str]]: ...
+
+# Implementations
 class ConsoleLogger:
     def info(self, message: str) -> None:
         print(f"INFO: {message}")
 
+class PostgreSQLDatabase:
+    def query(self, sql: str) -> list[dict[str, str]]:
+        # Implementation here
+        return [{"result": "data"}]
+
+# Create container and tokens
 container = Container()
-logger_token = Token[Logger]("logger", protocol=Logger)
-container.register(logger_token, ConsoleLogger, Scope.SINGLETON)
+LOGGER = Token[Logger]("logger", scope=Scope.SINGLETON)
+DATABASE = Token[Database]("database", scope=Scope.SINGLETON)
 
-# Type-safe resolution
-logger = container.get(logger_token)  # Type: Logger
-logger.info("Hello, World!")
+# Register providers
+container.register(LOGGER, ConsoleLogger)
+container.register(DATABASE, PostgreSQLDatabase)
+
+# Use with @inject decorator (recommended)
+@inject
+def process_users(logger: Logger, db: Database) -> None:
+    """Dependencies injected automatically via type annotations."""
+    logger.info("Processing users")
+    users = db.query("SELECT * FROM users")
+    logger.info(f"Found {len(users)} users")
+
+# Call without arguments - dependencies auto-resolved
+process_users()
+
+# Manual resolution also available
+logger = container.get(LOGGER)
+db = container.get(DATABASE)
 ```
 
-### 2. Automatic Dependency Injection
+### Async Support
 
 ```python
-from pyinj import Injectable
+import asyncio
+from typing import Protocol
+from pyinj import Container, Token, Scope, inject
 
-class EmailService(metaclass=Injectable):
-    __injectable__ = True
-    __token_name__ = "email_service" 
-    __scope__ = Scope.SINGLETON
-    
-    def __init__(self, logger: Logger):
-        self.logger = logger
-    
-    def send_email(self, to: str, subject: str) -> None:
-        self.logger.info(f"Sending email to {to}")
+class AsyncDatabase(Protocol):
+    async def connect(self) -> None: ...
+    async def query(self, sql: str) -> list[dict[str, str]]: ...
+    async def aclose(self) -> None: ...
 
-# Automatically registered and dependencies resolved!
-email_service = container.get(Injectable.get_registry()[EmailService])
-```
-
-### 3. Async-Safe with Proper Cleanup
-
-```python
-class DatabaseConnection:
+class PostgreSQLAsyncDatabase:
     async def connect(self) -> None:
         print("Connecting to database...")
+    
+    async def query(self, sql: str) -> list[dict[str, str]]:
+        return [{"id": "1", "name": "Alice"}]
     
     async def aclose(self) -> None:
         print("Closing database connection...")
 
-container.register(
-    Token[DatabaseConnection]("db"), 
-    DatabaseConnection, 
-    Scope.SINGLETON
-)
-
-# Async resolution
-db = await container.aget(Token[DatabaseConnection]("db"))
-await db.connect()
-
-# Automatic cleanup
-await container.dispose()  # Safely closes all resources
-
-### Circuit-Breaker Cleanup (New)
-
-To prevent subtle leaks, PyInj enforces async cleanup for async-only resources.
-Attempting to use synchronous cleanup with such a resource raises a
-semantically-typed exception:
-
-```python
-from pyinj import Container, Token, Scope
-from pyinj.exceptions import AsyncCleanupRequiredError
-from httpx import AsyncClient
-
+# Setup
 container = Container()
-client_token = Token[AsyncClient]("client", scope=Scope.SINGLETON)
+ASYNC_DB = Token[AsyncDatabase]("async_db", scope=Scope.SINGLETON)
 
-from contextlib import asynccontextmanager
+async def create_db() -> AsyncDatabase:
+    db = PostgreSQLAsyncDatabase()
+    await db.connect()
+    return db
 
-@asynccontextmanager
-async def client_cm():
-    client = AsyncClient()
-    try:
-        yield client
-    finally:
-        await client.aclose()
+container.register(ASYNC_DB, create_db)
 
-container.register_context(client_token, lambda: client_cm(), is_async=True)
-_ = await container.aget(client_token)
+# Async injection
+@inject
+async def process_users_async(db: AsyncDatabase) -> None:
+    users = await db.query("SELECT * FROM users")
+    print(f"Processed {len(users)} users")
 
-# This will raise AsyncCleanupRequiredError
-try:
-    with container:
-        pass
-except AsyncCleanupRequiredError:
-    ...
+# Usage
+async def main() -> None:
+    await process_users_async()
+    await container.aclose()  # Proper cleanup
 
-# Use async cleanup instead
-await container.aclose()
+asyncio.run(main())
 ```
 
-Container-level cleanup manages resources registered via `register_context_sync/async` (or `register_context(..., is_async=...)`) and
-closes them in LIFO order. Request/session scopes also clean up resources stored
-in the scope when the scope exits.
+## Type Safety & Static Analysis
 
-Typed registration helpers:
+PyInj provides full static type checking support:
+
+### PEP 561 Compliance
+
+PyInj includes a `py.typed` marker file and provides complete type information:
+
+```bash
+# Works with all type checkers
+mypy your_code.py
+basedpyright your_code.py
+pyright your_code.py
+```
+
+### Type-Safe Registration
 
 ```python
-from contextlib import contextmanager, asynccontextmanager
-from collections.abc import Generator, AsyncGenerator
+from typing import Protocol
+from pyinj import Container, Token, Scope
+
+class UserService(Protocol):
+    def get_user(self, id: int) -> dict[str, str]: ...
+
+class DatabaseUserService:
+    def get_user(self, id: int) -> dict[str, str]:
+        return {"id": str(id), "name": "User"}
+
+container = Container()
+USER_SERVICE = Token[UserService]("user_service", scope=Scope.SINGLETON)
+
+# Type-safe registration - mypy/basedpyright will verify compatibility
+container.register(USER_SERVICE, DatabaseUserService)  # ✅ OK
+
+# This would fail type checking:
+# container.register(USER_SERVICE, str)  # ❌ Type error
+```
+
+### Protocol-Based Injection
+
+```python
+from typing import Protocol, runtime_checkable
+from pyinj import Container, Token, inject
+
+@runtime_checkable
+class EmailService(Protocol):
+    def send_email(self, to: str, subject: str, body: str) -> bool: ...
+
+class SMTPEmailService:
+    def send_email(self, to: str, subject: str, body: str) -> bool:
+        print(f"Sending email to {to}: {subject}")
+        return True
+
+# Registration with runtime protocol validation
+container = Container()
+EMAIL_SERVICE = Token[EmailService]("email", scope=Scope.SINGLETON)
+container.register(EMAIL_SERVICE, SMTPEmailService)
+
+# Type-safe injection
+@inject
+def send_welcome_email(email_service: EmailService, user_email: str) -> None:
+    """email_service parameter is automatically injected."""
+    email_service.send_email(
+        to=user_email,
+        subject="Welcome!",
+        body="Thanks for joining us."
+    )
+
+# Usage - only provide non-injected arguments
+send_welcome_email(user_email="user@example.com")
+```
+
+## Injection Patterns Guide
+
+### ⭐ Recommended: Plain Type Annotations with @inject
+
+**Use this pattern for 95% of cases:**
+
+```python
+from pyinj import inject
+
+@inject  # Uses default container
+def business_logic(logger: Logger, db: Database, user_id: int) -> None:
+    """
+    ✅ RECOMMENDED PATTERN:
+    - Clean type annotations 
+    - Automatic dependency resolution
+    - Mixed injected/regular parameters
+    """
+    logger.info(f"Processing user {user_id}")
+    db.query("SELECT * FROM users WHERE id = ?", user_id)
+
+# Call with regular parameters only
+business_logic(user_id=123)
+```
+
+### 🎯 Advanced: Inject[T] Markers
+
+**Use only when you need explicit control or custom providers:**
+
+```python
+from typing import Annotated
+from pyinj import inject, Inject
+
+@inject
+def advanced_handler(
+    # Regular injection - recommended
+    logger: Logger,
+    
+    # With custom provider - useful for testing
+    cache: Annotated[Cache, Inject(lambda: MockCache())],
+    
+    # Regular parameter
+    request_id: str
+) -> None:
+    logger.info(f"Handling request {request_id}")
+    cache.set("last_request", request_id)
+```
+
+### ❌ Anti-Patterns to Avoid
+
+**DON'T do this - breaks type safety:**
+
+```python
+# ❌ WRONG - Don't do this!
+def bad_handler(logger: Inject[Logger] = None) -> None:
+    # This breaks type safety and static analysis
+    pass
+
+# ❌ WRONG - Mixing patterns unnecessarily
+def confusing_handler(logger: Inject[Logger]) -> None:
+    # Just use plain Logger annotation instead
+    pass
+```
+
+**✅ Correct alternatives:**
+
+```python
+# ✅ Simple and type-safe
+@inject
+def good_handler(logger: Logger) -> None:
+    logger.info("This is the recommended pattern")
+
+# ✅ For optional dependencies, use container overrides
+@inject  
+def handler_with_optional_logger(logger: Logger) -> None:
+    logger.info("Logger will be injected or overridden")
+
+# In tests:
+# container.override(LOGGER, MockLogger())
+```
+
+## Core Features
+
+### 1. Contextual Scoping
+
+```python
+from pyinj import Container, ContextualContainer, Token, Scope
+
+# Contextual container supports request/session scopes
+container = Container()  # Inherits from ContextualContainer
+
+USER_TOKEN = Token[User]("current_user", scope=Scope.REQUEST)
+SESSION_TOKEN = Token[Session]("session", scope=Scope.SESSION)
+
+def get_current_user() -> User:
+    return User(id=123, name="Alice")
+
+def get_session() -> Session:
+    return Session(id="sess_456", user_id=123)
+
+container.register(USER_TOKEN, get_current_user)
+container.register(SESSION_TOKEN, get_session)
+
+# Request scope - each request gets isolated dependencies
+with container.request_scope():
+    user1 = container.get(USER_TOKEN)
+    user2 = container.get(USER_TOKEN)
+    assert user1 is user2  # Same instance within request scope
+
+with container.request_scope():
+    user3 = container.get(USER_TOKEN)
+    assert user1 is not user3  # Different instance in new scope
+
+# Session scope - longer-lived than request
+with container.session_scope():
+    with container.request_scope():
+        session = container.get(SESSION_TOKEN)
+        # Session persists across multiple requests
+```
+
+### 2. TokenFactory for Convenient Creation
+
+```python
+from pyinj import Container, TokenFactory, Scope
+
+container = Container()
+# TokenFactory provides convenient methods
+factory = container.tokens  # Built-in factory
+
+# Convenient creation methods
+LOGGER = factory.singleton("logger", Logger)
+CACHE = factory.request("cache", CacheService) 
+CONFIG = factory.session("config", Configuration)
+TEMP_FILE = factory.transient("temp_file", TempFile)
+
+# With qualifiers for multiple instances
+PRIMARY_DB = factory.qualified("primary", Database, Scope.SINGLETON)
+SECONDARY_DB = factory.qualified("secondary", Database, Scope.SINGLETON)
+
+# Register providers
+container.register(PRIMARY_DB, lambda: PostgreSQLDatabase("primary"))
+container.register(SECONDARY_DB, lambda: PostgreSQLDatabase("secondary"))
+```
+
+### 3. Default Container Support
+
+```python
+from pyinj import get_default_container, set_default_container, inject
+
+# Set up global default container
+default_container = Container()
+set_default_container(default_container)
+
+# Register global services
+LOGGER = Token[Logger]("logger", scope=Scope.SINGLETON)
+default_container.register(LOGGER, ConsoleLogger)
+
+# @inject uses default container when none specified
+@inject
+def handler(logger: Logger) -> None:
+    logger.info("Using default container")
+
+# Anywhere in your app
+current_container = get_default_container()
+```
+
+### 4. Resource Cleanup with Context Managers
+
+```python
+import asyncio
+from contextlib import asynccontextmanager, contextmanager
+from typing import AsyncGenerator, Generator
+from pyinj import Container, Token, Scope
 
 # Sync context manager
-@contextmanager
-def db_cm() -> Generator[DatabaseConnection, None, None]:
-    db = DatabaseConnection()
+@contextmanager 
+def database_connection() -> Generator[Database, None, None]:
+    print("Opening database connection")
+    db = PostgreSQLDatabase()
     try:
         yield db
     finally:
+        print("Closing database connection")
         db.close()
-
-container.register_context_sync(Token("db", DatabaseConnection, scope=Scope.SINGLETON), lambda: db_cm())
 
 # Async context manager
 @asynccontextmanager
-async def client_cm() -> AsyncGenerator[AsyncClient, None]:
-    client = AsyncClient()
+async def async_http_client() -> AsyncGenerator[httpx.AsyncClient, None]:
+    print("Creating HTTP client")
+    client = httpx.AsyncClient()
     try:
         yield client
     finally:
+        print("Closing HTTP client")
         await client.aclose()
 
-container.register_context_async(Token("client", AsyncClient, scope=Scope.SINGLETON), lambda: client_cm())
+# Register context managers
+container = Container()
+DB_TOKEN = Token[Database]("database", scope=Scope.SINGLETON)
+HTTP_TOKEN = Token[httpx.AsyncClient]("http_client", scope=Scope.SINGLETON)
+
+container.register_context_sync(DB_TOKEN, database_connection)
+container.register_context_async(HTTP_TOKEN, async_http_client)
+
+# Automatic cleanup
+async def main() -> None:
+    # Resources created on first access
+    db = container.get(DB_TOKEN)
+    client = await container.aget(HTTP_TOKEN)
+    
+    # Proper cleanup in LIFO order
+    await container.aclose()
+
+asyncio.run(main())
 ```
 
-Fail-fast behavior: if a provider raises during setup/enter (`__enter__`/`__aenter__`), the exception propagates to the resolver so the failure is explicit and debuggable.
-```
-
-### 4. Testing Made Easy
+### 5. Given Instances (Scala-Style)
 
 ```python
+from pyinj import Container, Given, inject
+
+class UserService:
+    def __init__(self, db: Database):
+        self.db = db
+
+# Scala-inspired given instances
+container = Container()
+
+# Register "given" providers
+container.given(Database, lambda: PostgreSQLDatabase())
+container.given(Logger, lambda: ConsoleLogger())
+
+@inject
+def process_request(
+    user_service: Given[UserService],  # Resolved from given instances
+    request_id: str
+) -> None:
+    # user_service automatically constructed with given Database
+    pass
+```
+
+## Advanced Patterns
+
+### Async-Safe Singleton Initialization
+
+```python
+import asyncio
+from pyinj import Container, Token, Scope
+
+# Thread-safe async singleton creation
+async def create_expensive_service() -> ExpensiveService:
+    print("Creating expensive service...")
+    await asyncio.sleep(0.1)  # Simulate expensive initialization
+    return ExpensiveService()
+
+container = Container()
+SERVICE_TOKEN = Token[ExpensiveService]("expensive", scope=Scope.SINGLETON)
+container.register(SERVICE_TOKEN, create_expensive_service)
+
+async def concurrent_access() -> None:
+    # Multiple concurrent accesses - only one instance created
+    tasks = [container.aget(SERVICE_TOKEN) for _ in range(100)]
+    services = await asyncio.gather(*tasks)
+    
+    # All references point to the same instance
+    assert all(s is services[0] for s in services)
+    print(f"All {len(services)} references are identical")
+
+asyncio.run(concurrent_access())
+```
+
+### Circular Dependency Detection
+
+```python
+from pyinj import Container, Token, CircularDependencyError
+
+class ServiceA:
+    def __init__(self, service_b: 'ServiceB'):
+        self.service_b = service_b
+
+class ServiceB:
+    def __init__(self, service_a: ServiceA):
+        self.service_a = service_a
+
+container = Container()
+SERVICE_A = Token[ServiceA]("service_a")
+SERVICE_B = Token[ServiceB]("service_b")
+
+# This creates a circular dependency
+container.register(SERVICE_A, lambda: ServiceA(container.get(SERVICE_B)))
+container.register(SERVICE_B, lambda: ServiceB(container.get(SERVICE_A)))
+
+try:
+    container.get(SERVICE_A)
+except CircularDependencyError as e:
+    print(f"Circular dependency detected: {e}")
+    # Output: Cannot resolve token 'service_a':
+    #   Resolution chain: service_a -> service_b -> service_a
+    #   Cause: Circular dependency detected
+```
+
+### Type-Safe Override System
+
+```python
+from unittest.mock import Mock
+from pyinj import Container, Token
+
 # Production setup
-container.register(logger_token, ConsoleLogger)
+container = Container()
+EMAIL_SERVICE = Token[EmailService]("email", scope=Scope.SINGLETON)
+container.register(EMAIL_SERVICE, SMTPEmailService)
 
-# Test override
-test_logger = Mock(spec=Logger)
-container.override(logger_token, test_logger)
-
-# Test your code
-service = container.get(service_token)
-service.do_something()
-
-# Verify interactions
-test_logger.info.assert_called_with("Expected message")
-
-# Cleanup
-container.clear_overrides()
-```
-
-## Advanced Usage
-
-### Protocol-Based Resolution
-
-```python
-# Resolve by protocol instead of token
-from pyinj import inject
-
-@inject
-def business_logic(logger: Logger, db: Database) -> str:
-    logger.info("Processing business logic")
-    return db.query("SELECT * FROM users")
-
-# Dependencies automatically injected based on type hints
-result = business_logic()
-
-### Plain Type Injection
-
-Annotate parameters with concrete types and use `@inject` to resolve them.
-Builtins like `str`/`int` are ignored to avoid surprises.
-
-```python
-@inject
-def process(logger: Logger, db: Database) -> None:
-    logger.info("processing"); db.connect()
-```
-```
-
-### Multiple Scopes
-
-```python
-from pyinj import Scope
-
-# Singleton - one instance per container
-container.register(config_token, load_config, Scope.SINGLETON)
-
-# Transient - new instance every time  
-container.register(request_token, create_request, Scope.TRANSIENT)
-
-# Request/Session - scoped to request/session context
-container.register(user_token, get_current_user, Scope.REQUEST)
-```
-
-### Async Patterns
-
-```python
-# Async providers
-async def create_async_service() -> AsyncService:
-    service = AsyncService()
-    await service.initialize()
-    return service
-
-container.register(service_token, create_async_service, Scope.SINGLETON)
-
-# Concurrent resolution with race condition protection
-results = await asyncio.gather(*[
-    container.aget(service_token) for _ in range(100)
-])
-
-# All results are the same instance (singleton)
-assert all(r is results[0] for r in results)
-```
-
-## Performance
-
-PyInj is optimized for production workloads:
-
-- **O(1) type lookups** - Constant time resolution regardless of container size
-- **Cached injection metadata** - Function signatures parsed once at decoration time  
-- **Lock-free fast paths** - Singletons use double-checked locking pattern
-- **Memory efficient** - Minimal overhead per registered dependency
-
-```python
-# Benchmark: 1000 services registered
-# Resolution time: ~0.0001ms (O(1) guaranteed)
-# Memory overhead: ~500 bytes per service
+# Type-safe testing with overrides
+def test_email_functionality() -> None:
+    # Create type-safe mock
+    mock_email = Mock(spec=EmailService)
+    mock_email.send_email.return_value = True
+    
+    # Override for testing - type checked!
+    container.override(EMAIL_SERVICE, mock_email)
+    
+    @inject
+    def send_notification(email_service: EmailService) -> bool:
+        return email_service.send_email("test@example.com", "Test", "Body")
+    
+    # Test uses mock
+    result = send_notification()
+    assert result is True
+    mock_email.send_email.assert_called_once()
+    
+    # Cleanup override
+    container.clear_overrides()
 ```
 
 ## Framework Integration
 
-### FastAPI
+### FastAPI Integration
 
 ```python
+from typing import Annotated
 from fastapi import FastAPI, Depends
-from pyinj import Container
+from pyinj import Container, Token, Scope, inject
 
+# Setup DI container
 app = FastAPI()
 container = Container()
 
-def get_service(container: Container = Depends(lambda: container)) -> MyService:
-    return container.get(service_token)
+# Register services
+USER_SERVICE = Token[UserService]("user_service", scope=Scope.SINGLETON)
+EMAIL_SERVICE = Token[EmailService]("email_service", scope=Scope.SINGLETON)
 
+container.register(USER_SERVICE, lambda: DatabaseUserService())
+container.register(EMAIL_SERVICE, lambda: SMTPEmailService())
+
+# FastAPI dependency provider
+def get_container() -> Container:
+    return container
+
+# Option 1: FastAPI-style dependencies
 @app.post("/users")
-async def create_user(service: MyService = Depends(get_service)):
-    return await service.create_user()
+async def create_user(
+    user_data: UserCreateRequest,
+    user_service: Annotated[UserService, Depends(lambda: container.get(USER_SERVICE))],
+    email_service: Annotated[EmailService, Depends(lambda: container.get(EMAIL_SERVICE))]
+) -> UserResponse:
+    user = user_service.create_user(user_data)
+    email_service.send_email(user.email, "Welcome!", "Welcome to our service")
+    return UserResponse.from_user(user)
+
+# Option 2: PyInj @inject decorator (cleaner)
+@app.post("/users-v2")
+@inject(container=container)
+async def create_user_v2(
+    user_data: UserCreateRequest,
+    user_service: UserService,  # Auto-injected
+    email_service: EmailService  # Auto-injected
+) -> UserResponse:
+    user = user_service.create_user(user_data)
+    email_service.send_email(user.email, "Welcome!", "Welcome to our service")
+    return UserResponse.from_user(user)
+
+# Request-scoped dependencies
+@app.middleware("http")
+async def setup_request_scope(request, call_next):
+    async with container.async_request_scope():
+        response = await call_next(request)
+    return response
+
+# Startup/shutdown
+@app.on_event("startup")
+async def startup():
+    # Initialize resources
+    pass
+
+@app.on_event("shutdown") 
+async def shutdown():
+    await container.aclose()
 ```
 
-### Django/Flask
+### Django Integration
 
 ```python
-# Django settings.py
-from pyinj import Container
+# settings.py
+from pyinj import Container, Token, Scope, set_default_container
 
-# Global container
+# Global container setup
 DI_CONTAINER = Container()
+set_default_container(DI_CONTAINER)
 
-# In views
-def my_view(request):
-    service = DI_CONTAINER.get(service_token)
-    return service.handle_request(request)
+# Register services
+USER_SERVICE = Token[UserService]("user_service", scope=Scope.SINGLETON)
+EMAIL_SERVICE = Token[EmailService]("email_service", scope=Scope.SINGLETON)
+
+DI_CONTAINER.register(USER_SERVICE, lambda: DjangoUserService())
+DI_CONTAINER.register(EMAIL_SERVICE, lambda: DjangoEmailService())
+
+# views.py
+from django.http import JsonResponse
+from pyinj import inject
+
+@inject  # Uses default container
+def create_user_view(
+    request,
+    user_service: UserService,  # Auto-injected
+    email_service: EmailService  # Auto-injected
+) -> JsonResponse:
+    if request.method == 'POST':
+        user_data = json.loads(request.body)
+        user = user_service.create_user(user_data)
+        email_service.send_welcome_email(user.email)
+        return JsonResponse({"user_id": user.id})
+    
+    return JsonResponse({"error": "Method not allowed"}, status=405)
 ```
 
-### CLI Applications
+### CLI Applications with Click
 
 ```python
 import click
-from pyinj import Container
+from pyinj import Container, Token, Scope, inject
 
-@click.command()
+# Setup container
+container = Container()
+CONFIG_SERVICE = Token[ConfigService]("config", scope=Scope.SINGLETON)
+LOGGER = Token[Logger]("logger", scope=Scope.SINGLETON)
+
+container.register(CONFIG_SERVICE, lambda: FileConfigService("config.yml"))
+container.register(LOGGER, lambda: ConsoleLogger())
+
+@click.group()
 @click.pass_context
 def cli(ctx):
-    ctx.obj = Container()
-    # Register services...
+    """CLI application with dependency injection."""
+    ctx.obj = container
 
 @cli.command()
-@click.pass_context  
-def process(ctx):
-    container = ctx.obj
-    service = container.get(service_token)
-    service.process()
+@click.argument('name')
+@click.pass_context
+@inject  # Can access container via click context
+def greet(ctx, name: str, logger: Logger) -> None:
+    """Greet a user with proper logging."""
+    logger.info(f"Greeting user: {name}")
+    click.echo(f"Hello, {name}!")
+
+@cli.command()
+@click.pass_context
+@inject
+def status(ctx, config: ConfigService, logger: Logger) -> None:
+    """Show application status."""
+    logger.info("Checking application status")
+    version = config.get("version", "unknown")
+    click.echo(f"Application version: {version}")
+
+if __name__ == "__main__":
+    cli()
 ```
 
-## Error Handling
+## Testing Patterns
 
-PyInj provides clear, actionable error messages:
+### Unit Testing with Dependency Overrides
 
 ```python
-# Circular dependency detection
-Container Error: Cannot resolve token 'service_a':
-  Resolution chain: service_a -> service_b -> service_a
-  Cause: Circular dependency detected
+import pytest
+from unittest.mock import Mock, MagicMock
+from pyinj import Container, Token, Scope
 
-# Missing provider
-Container Error: Cannot resolve token 'missing_service':
-  Resolution chain: root
-  Cause: No provider registered for token 'missing_service'
+class TestUserService:
+    def setup_method(self):
+        """Setup for each test method."""
+        self.container = Container()
+        
+        # Register production dependencies
+        self.db_token = Token[Database]("database", scope=Scope.SINGLETON)
+        self.email_token = Token[EmailService]("email", scope=Scope.SINGLETON)
+        self.user_service_token = Token[UserService]("user_service")
+        
+        self.container.register(self.db_token, PostgreSQLDatabase)
+        self.container.register(self.email_token, SMTPEmailService)
+        self.container.register(
+            self.user_service_token,
+            lambda: UserService(
+                db=self.container.get(self.db_token),
+                email=self.container.get(self.email_token)
+            )
+        )
+    
+    def test_create_user_success(self):
+        """Test successful user creation with mocked dependencies."""
+        # Create type-safe mocks
+        mock_db = Mock(spec=Database)
+        mock_email = Mock(spec=EmailService)
+        
+        mock_db.create_user.return_value = User(id=1, email="test@example.com")
+        mock_email.send_welcome_email.return_value = True
+        
+        # Override dependencies for this test
+        self.container.override(self.db_token, mock_db)
+        self.container.override(self.email_token, mock_email)
+        
+        # Get service with mocked dependencies
+        user_service = self.container.get(self.user_service_token)
+        
+        # Test
+        user = user_service.create_user("test@example.com")
+        
+        # Verify
+        assert user.id == 1
+        mock_db.create_user.assert_called_once_with("test@example.com")
+        mock_email.send_welcome_email.assert_called_once_with("test@example.com")
+    
+    def teardown_method(self):
+        """Cleanup after each test."""
+        self.container.clear_overrides()
 
-# Type validation failure  
-Container Error: Provider for token 'logger' returned <Mock>, expected <Logger>
+### Async Testing
+
+```python
+import asyncio
+import pytest
+from unittest.mock import AsyncMock
+from pyinj import Container, Token, Scope
+
+@pytest.mark.asyncio
+async def test_async_user_service():
+    """Test async service with async mocked dependencies."""
+    container = Container()
+    
+    # Setup tokens
+    async_db_token = Token[AsyncDatabase]("async_db", scope=Scope.SINGLETON)
+    async_email_token = Token[AsyncEmailService]("async_email", scope=Scope.SINGLETON)
+    
+    # Create async mocks
+    mock_async_db = AsyncMock(spec=AsyncDatabase)
+    mock_async_email = AsyncMock(spec=AsyncEmailService)
+    
+    mock_async_db.create_user.return_value = User(id=1, email="test@example.com")
+    mock_async_email.send_welcome_email.return_value = True
+    
+    # Override with mocks
+    container.override(async_db_token, mock_async_db)
+    container.override(async_email_token, mock_async_email)
+    
+    # Test with @inject decorator
+    @inject(container=container)
+    async def create_user_workflow(
+        email: str,
+        db: AsyncDatabase,
+        email_service: AsyncEmailService
+    ) -> User:
+        user = await db.create_user(email)
+        await email_service.send_welcome_email(email)
+        return user
+    
+    # Execute test
+    user = await create_user_workflow("test@example.com")
+    
+    # Verify
+    assert user.id == 1
+    mock_async_db.create_user.assert_called_once_with("test@example.com")
+    mock_async_email.send_welcome_email.assert_called_once_with("test@example.com")
+
+### Request-Scoped Testing
+
+```python
+def test_request_scoped_dependencies():
+    """Test request-scoped dependency isolation."""
+    container = Container()
+    request_service_token = Token[RequestService]("request_service", scope=Scope.REQUEST)
+    
+    container.register(request_service_token, lambda: RequestService())
+    
+    # Request 1
+    with container.request_scope():
+        service1a = container.get(request_service_token) 
+        service1b = container.get(request_service_token)
+        assert service1a is service1b  # Same instance within scope
+    
+    # Request 2
+    with container.request_scope():
+        service2 = container.get(request_service_token)
+        assert service1a is not service2  # Different instance in new scope
 ```
 
-## Migration Guide
+## Performance Optimizations
+
+### O(1) Token Lookups
+
+```python
+from pyinj import Container, Token, TokenFactory
+
+# Tokens use pre-computed hashes for O(1) lookups
+container = Container()
+factory = TokenFactory()
+
+# Create many tokens - lookups remain constant time
+tokens = [
+    factory.singleton(f"service_{i}", type(f"Service{i}", (), {}))
+    for i in range(1000)
+]
+
+# Register all services
+for i, token in enumerate(tokens):
+    container.register(token, lambda i=i: f"Service instance {i}")
+
+# Resolution time is O(1) regardless of container size
+service_500 = container.get(tokens[500])  # Same speed as tokens[0]
+```
+
+### Cached Injection Metadata
+
+```python
+from pyinj import inject, InjectionAnalyzer
+
+# Function signature analysis is cached automatically
+@inject  # Analysis cached on first call
+def expensive_handler(
+    service1: Service1,
+    service2: Service2,
+    service3: Service3,
+    regular_param: str
+) -> None:
+    pass
+
+# Subsequent calls use cached metadata - no re-analysis
+expensive_handler(regular_param="test")  # Fast
+expensive_handler(regular_param="test2") # Fast
+```
+
+### Memory-Efficient Resource Management
+
+```python
+from weakref import WeakValueDictionary
+from pyinj import Container, Token, Scope
+
+# Transient dependencies use weak references for automatic cleanup
+container = Container()
+
+# These don't prevent garbage collection
+TEMP_TOKEN = Token[TempService]("temp", scope=Scope.TRANSIENT)
+container.register(TEMP_TOKEN, lambda: TempService())
+
+temp_service = container.get(TEMP_TOKEN)
+# When temp_service goes out of scope, it can be garbage collected
+# Container doesn't hold strong references to transient instances
+```
+
+## Error Handling and Debugging
+
+### Detailed Error Messages
+
+```python
+from pyinj import Container, Token, ResolutionError
+
+container = Container()
+SERVICE_A = Token[ServiceA]("service_a")
+SERVICE_B = Token[ServiceB]("missing_service")
+
+# Register only SERVICE_A, not SERVICE_B
+container.register(SERVICE_A, lambda: ServiceA(container.get(SERVICE_B)))
+
+try:
+    container.get(SERVICE_A)
+except ResolutionError as e:
+    print(f"Resolution error: {e}")
+    # Output:
+    # Cannot resolve token 'missing_service':
+    #   Resolution chain: service_a -> missing_service
+    #   Cause: No provider registered for token 'missing_service'
+    
+    # Access structured error data
+    print(f"Failed token: {e.token.name}")
+    print(f"Resolution chain: {[t.name for t in e.chain]}")
+    print(f"Root cause: {e.cause}")
+```
+
+### Debug Mode
+
+```python
+import logging
+from pyinj import Container, Token
+
+# Enable debug logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger("pyinj")
+
+container = Container()
+SERVICE_TOKEN = Token[DebugService]("debug_service", scope=Scope.SINGLETON)
+
+container.register(SERVICE_TOKEN, lambda: DebugService())
+
+# Resolution steps are logged in debug mode
+service = container.get(SERVICE_TOKEN)
+```
+
+## Migration Guides
 
 ### From dependency-injector
 
@@ -403,94 +932,318 @@ Container Error: Provider for token 'logger' returned <Mock>, expected <Logger>
 # Before (dependency-injector)
 from dependency_injector import containers, providers
 
-class Container(containers.DeclarativeContainer):
+class ApplicationContainer(containers.DeclarativeContainer):
     config = providers.Configuration()
-    logger = providers.Singleton(Logger)
+    
+    database = providers.Singleton(
+        Database,
+        host=config.database.host,
+        port=config.database.port
+    )
+    
+    user_service = providers.Factory(
+        UserService,
+        db=database
+    )
 
 # After (PyInj)
 from pyinj import Container, Token, Scope
 
 container = Container()
-logger_token = Token[Logger]("logger")
-container.register(logger_token, Logger, Scope.SINGLETON)
+
+# Define tokens
+DATABASE = Token[Database]("database", scope=Scope.SINGLETON)
+USER_SERVICE = Token[UserService]("user_service", scope=Scope.TRANSIENT)
+
+# Register providers
+container.register(
+    DATABASE, 
+    lambda: Database(
+        host=config.get("database.host"),
+        port=config.get("database.port")
+    )
+)
+
+container.register(
+    USER_SERVICE,
+    lambda: UserService(db=container.get(DATABASE))
+)
 ```
 
 ### From injector
 
 ```python
-# Before (injector)  
+# Before (injector)
 from injector import Injector, inject, singleton
 
 injector = Injector()
-injector.binder.bind(Logger, to=ConsoleLogger, scope=singleton)
+injector.binder.bind(Database, to=PostgreSQLDatabase, scope=singleton)
 
 @inject
-def my_function(logger: Logger) -> None: ...
+def user_handler(db: Database) -> None:
+    pass
 
-# After (PyInj)
+# After (PyInj) 
+from pyinj import Container, Token, Scope, inject
+
 container = Container()
-container.register(Token[Logger]("logger"), ConsoleLogger, Scope.SINGLETON)
+DATABASE = Token[Database]("database", scope=Scope.SINGLETON)
+container.register(DATABASE, PostgreSQLDatabase)
 
-@container.inject
-def my_function(logger: Logger) -> None: ...
+@inject(container=container)  # or set as default container
+def user_handler(db: Database) -> None:
+    pass
 ```
 
-## Development
+## Development Setup
 
 ```bash
 # Clone repository
-git clone <repo-url>
+git clone https://github.com/qriusglobal/pyinj.git
 cd pyinj
 
-# Install dependencies  
+# Install with development dependencies
 uv sync
 
-# Run tests
-uv run pytest -q
+# Run tests with coverage
+uv run pytest --cov=pyinj --cov-report=html
 
-# Type checking
+# Type checking (strict mode)
 uvx basedpyright src
 
-# Format code
+# Format and lint
 uvx ruff format .
+uvx ruff check . --fix
 
 # Run all quality checks
 uvx ruff check . && uvx basedpyright src && uv run pytest -q
 ```
 
-## Release Process
+### Running Tests
 
-- Versioning: follow SemVer. Use pre-release tags (a, b, rc) while in beta; e.g. `1.0.1b1`.
-- Classifiers: set an appropriate development status (e.g., "Development Status :: 4 - Beta").
-- Build locally with uv:
-  - `rm -rf dist`
-  - `uv build`
-- Publish to PyPI with uv:
-  - `uv publish --token "$PYPI_API_TOKEN"`
-- CI/CD:
-  - GitHub Actions runs tests with uv on PRs/commits.
-  - Releases are built/published via `.github/workflows/publish.yml` using uv.
-- Yanking incorrect releases:
-  - PyPI does not support API/CLI yanking; use the project release UI to “Yank this release”.
-  - You cannot overwrite or reuse a version once uploaded.
+```bash
+# All tests
+uv run pytest
 
-### Current Release Notes (maintainer summary)
+# Specific test categories
+uv run pytest tests/test_container.py          # Core container tests
+uv run pytest tests/test_injection.py         # Injection decorator tests  
+uv run pytest tests/test_contextual.py        # Scoping tests
+uv run pytest tests/test_async.py             # Async tests
+uv run pytest tests/test_performance.py       # Performance benchmarks
+uv run pytest tests/integration/              # Integration tests
 
-- Removed string-based tokens; only `Token` or `type` are supported.
-- Extracted and delegated scope orchestration to `ScopeManager`.
-- Finalized `InjectionAnalyzer` plan usage in decorators.
-- Strengthened typing with `Resolvable` protocol for resolution functions.
-- Tests updated to avoid strings and expect typed errors.
-- Packaging: moved `py.typed` into `src/pyinj/` and ensured inclusion in wheels/sdists.
-- Version and metadata updated; CI and PyPI publish workflows added using uv.
+# With coverage
+uv run pytest --cov=pyinj --cov-report=term-missing
+```
+
+## Best Practices
+
+### 1. Token Organization
+
+```python
+# tokens.py - Centralize token definitions
+from pyinj import TokenFactory, Token
+from typing import Protocol
+
+# Use factory for consistency
+factory = TokenFactory()
+
+# Group related tokens
+class DatabaseTokens:
+    PRIMARY = factory.singleton("primary_db", Database)
+    SECONDARY = factory.singleton("secondary_db", Database)
+    CACHE = factory.request("cache", CacheService)
+
+class ServiceTokens:
+    USER_SERVICE = factory.singleton("user_service", UserService)
+    EMAIL_SERVICE = factory.singleton("email_service", EmailService)
+    AUTH_SERVICE = factory.request("auth_service", AuthService)
+
+# Use protocols for flexibility
+class Tokens:
+    LOGGER = factory.singleton("logger", Logger)  # Protocol
+    CONFIG = factory.singleton("config", Configuration)  # Concrete
+```
+
+### 2. Container Lifecycle Management
+
+```python
+# app.py - Application lifecycle
+import asyncio
+from contextlib import asynccontextmanager
+from pyinj import Container, set_default_container
+
+@asynccontextmanager
+async def lifespan():
+    """Manage container lifecycle."""
+    # Startup
+    container = Container()
+    await setup_dependencies(container)
+    set_default_container(container)
+    
+    try:
+        yield container
+    finally:
+        # Shutdown - cleanup resources
+        await container.aclose()
+
+async def setup_dependencies(container: Container) -> None:
+    """Register all application dependencies."""
+    # Register database connections
+    container.register(DatabaseTokens.PRIMARY, create_primary_db)
+    container.register(DatabaseTokens.SECONDARY, create_secondary_db)
+    
+    # Register services
+    container.register(ServiceTokens.USER_SERVICE, create_user_service)
+    container.register(ServiceTokens.EMAIL_SERVICE, create_email_service)
+
+async def main():
+    async with lifespan() as container:
+        # Application code here
+        await run_application()
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+### 3. Testing Strategy
+
+```python
+# test_base.py - Shared testing infrastructure
+import pytest
+from pyinj import Container
+from unittest.mock import Mock
+
+class DITestCase:
+    """Base class for DI-enabled tests."""
+    
+    def setup_method(self):
+        self.container = Container()
+        self.mocks = {}
+        
+    def mock_service(self, token: Token[T], **kwargs) -> Mock:
+        """Create and register a type-safe mock."""
+        mock = Mock(spec=token.type_, **kwargs)
+        self.container.override(token, mock)
+        self.mocks[token.name] = mock
+        return mock
+        
+    def teardown_method(self):
+        self.container.clear_overrides()
+
+# test_user_service.py - Concrete test
+class TestUserService(DITestCase):
+    
+    def test_create_user(self):
+        # Setup mocks
+        mock_db = self.mock_service(DatabaseTokens.PRIMARY)
+        mock_email = self.mock_service(ServiceTokens.EMAIL_SERVICE)
+        
+        mock_db.create_user.return_value = User(id=1, email="test@example.com")
+        mock_email.send_welcome_email.return_value = True
+        
+        # Test
+        user_service = self.container.get(ServiceTokens.USER_SERVICE)
+        user = user_service.create_user("test@example.com")
+        
+        # Verify
+        assert user.id == 1
+        mock_db.create_user.assert_called_once()
+        mock_email.send_welcome_email.assert_called_once()
+```
+
+## Troubleshooting
+
+### Common Issues
+
+**1. Circular Dependencies**
+```python
+# Problem: Services depend on each other
+# Solution: Use lazy injection or redesign
+
+# Instead of:
+class ServiceA:
+    def __init__(self, service_b: ServiceB): ...
+
+class ServiceB:
+    def __init__(self, service_a: ServiceA): ...
+
+# Do:
+class ServiceA:
+    def __init__(self, get_service_b: Callable[[], ServiceB]): ...
+
+# Or redesign to avoid circular dependency
+```
+
+**2. Type Checker Issues**
+```python
+# Problem: mypy/basedpyright can't infer types
+# Solution: Use explicit type annotations
+
+# Instead of:
+@inject
+def handler(service):  # Type unknown
+    pass
+
+# Do:
+@inject  
+def handler(service: UserService) -> None:  # Explicit types
+    pass
+```
+
+**3. Async/Sync Mixing**
+```python
+# Problem: Using async resources in sync context
+# Solution: Use appropriate container methods
+
+# Instead of:
+async def create_service():
+    return AsyncService()
+
+container.register(TOKEN, create_service)
+service = container.get(TOKEN)  # ❌ Error: async provider in sync context
+
+# Do:
+service = await container.aget(TOKEN)  # ✅ Correct async usage
+```
+
+**4. Resource Leaks**
+```python
+# Problem: Resources not properly cleaned up
+# Solution: Use context managers or proper cleanup
+
+# Instead of:
+def create_connection():
+    return DatabaseConnection()  # May leak
+
+# Do:
+@contextmanager
+def database_connection():
+    conn = DatabaseConnection()
+    try:
+        yield conn
+    finally:
+        conn.close()
+
+container.register_context_sync(DB_TOKEN, database_connection)
+```
 
 ## Contributing
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Make changes with tests
-4. Ensure all quality checks pass
+3. Write tests for your changes
+4. Ensure all quality checks pass (`uvx ruff check . && uvx basedpyright src && uv run pytest`)
 5. Submit a pull request
+
+### Code Standards
+
+- **Type safety**: All code must pass `basedpyright --strict`
+- **Testing**: Maintain 90%+ test coverage
+- **Documentation**: Update README for user-facing changes
+- **Formatting**: Use `ruff format` (88 character lines)
+- **Performance**: Maintain O(1) lookup guarantees
 
 ## License
 
@@ -501,11 +1254,11 @@ MIT License - see [LICENSE](LICENSE) file for details.
 **Py** - Python-first design for modern Python 3.13+  
 **Inj** - Injection (Dependency Injection)
 
-PyInj follows the philosophy that **good software is simple software**. We provide exactly what you need for dependency injection - nothing more, nothing less.
+PyInj follows the philosophy that **good software is simple software**. We provide exactly what you need for dependency injection with complete type safety - nothing more, nothing less.
 
 ---
 
-**Ready to simplify your Python dependency injection?**
+**Ready to build type-safe applications with confidence?**
 
 ```bash
 uv add pyinj

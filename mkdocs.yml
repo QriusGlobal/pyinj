@@ -27,10 +27,12 @@ theme:
 nav:
   - Overview: index.md
   - Getting Started: getting-started.md
+  - Type Safety: type-safety.md
   - Usage: usage.md
-  - LLM Guide: llm.md
   - Advanced: advanced.md
+  - Testing: testing.md
   - Performance: performance.md
+  - Troubleshooting: troubleshooting.md
   - API: api.md
   - Contributing: contributing.md
   - Release Process: releases.md
@@ -56,8 +58,3 @@ extra:
 
 plugins:
   - search
-  - minify:
-      minify_html: true
-  - mkdocstrings:
-      default_handler: python
-  - mike
