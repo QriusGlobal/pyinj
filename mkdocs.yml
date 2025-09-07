@@ -59,3 +59,7 @@ extra:
 
 plugins:
   - search
+
+# Hook to copy extra files
+hooks:
+  - scripts/copy_extra_files.py
