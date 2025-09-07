@@ -76,7 +76,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#llm-raw-markdown-access" class="md-skip">
+        <a href="#llm-documentation-access" class="md-skip">
           Skip to content
         </a>
       
@@ -623,17 +623,20 @@
   
 
 
-<h1 id="llm-raw-markdown-access">LLM Raw Markdown Access<a class="headerlink" href="#llm-raw-markdown-access" title="Permanent link">&para;</a></h1>
-<p>For LLM tools and agents that need direct access to PyInj documentation as raw markdown without HTML processing, use this direct GitHub raw content link:</p>
-<p><strong>Raw Markdown URL:</strong>
+<h1 id="llm-documentation-access">LLM Documentation Access<a class="headerlink" href="#llm-documentation-access" title="Permanent link">&para;</a></h1>
+<p>For LLM tools and agents that need direct access to PyInj documentation, we provide the standard <code>llms.txt</code> endpoint:</p>
+<p><strong>Standard LLM Endpoint:</strong>
+<div class="highlight"><pre><span></span><code>https://qriusglobal.github.io/pyinj/llms.txt
+</code></pre></div></p>
+<p>This follows the <code>llms.txt</code> standard and provides:
+- Comprehensive PyInj documentation in plain text
+- No HTML wrapper, CSS, or JavaScript processing
+- Direct HTTP GET access optimized for LLM consumption
+- Complete usage patterns, examples, and best practices
+- Framework integration guides and migration documentation</p>
+<p><strong>Alternative GitHub Raw:</strong>
 <div class="highlight"><pre><span></span><code>https://raw.githubusercontent.com/QriusGlobal/pyinj/main/docs/llm.md
 </code></pre></div></p>
-<p>This endpoint provides:
-- Pure markdown content without HTML wrapper
-- No CSS or JavaScript processing<br />
-- Direct HTTP GET access for LLM consumption
-- Content-Type: text/plain
-- Concise PyInj integration guide (&lt;10k tokens)</p>
 <h2 id="alternative-copy-raw-content-below">Alternative: Copy Raw Content Below<a class="headerlink" href="#alternative-copy-raw-content-below" title="Permanent link">&para;</a></h2>
 <hr />
 <h1 id="llm-guide-using-pyinj-for-reliable-di">LLM Guide: Using PyInj for Reliable DI<a class="headerlink" href="#llm-guide-using-pyinj-for-reliable-di" title="Permanent link">&para;</a></h1>
