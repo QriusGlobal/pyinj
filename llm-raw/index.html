@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://qriusglobal.github.io/pyinj/contributing/">
+        <link rel="canonical" href="https://qriusglobal.github.io/pyinj/llm-raw/">
       
       
-        <link rel="prev" href="../llm-raw/">
+        <link rel="prev" href="../api/">
       
       
-        <link rel="next" href="../releases/">
+        <link rel="next" href="../contributing/">
       
       
       <link rel="icon" href="../assets/images/favicon.png">
@@ -24,7 +24,7 @@
     
     
       
-        <title>Contributing - PyInj</title>
+        <title>LLM Guide (Raw) - PyInj</title>
       
     
     
@@ -76,7 +76,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#contributing" class="md-skip">
+        <a href="#llm-raw-markdown-access" class="md-skip">
           Skip to content
         </a>
       
@@ -116,7 +116,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Contributing
+              LLM Guide (Raw)
             
           </span>
         </div>
@@ -451,28 +451,6 @@
       
   
   
-  
-  
-    <li class="md-nav__item">
-      <a href="../llm-raw/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    LLM Guide (Raw)
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-    
-      
-      
-  
-  
     
   
   
@@ -485,7 +463,71 @@
         
       
       
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    LLM Guide (Raw)
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
       <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    LLM Guide (Raw)
+    
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#alternative-copy-raw-content-below" class="md-nav__link">
+    <span class="md-ellipsis">
+      Alternative: Copy Raw Content Below
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../contributing/" class="md-nav__link">
         
   
   
@@ -496,7 +538,6 @@
   
 
       </a>
-      
     </li>
   
 
@@ -543,6 +584,23 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#alternative-copy-raw-content-below" class="md-nav__link">
+    <span class="md-ellipsis">
+      Alternative: Copy Raw Content Below
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -557,7 +615,7 @@
 
 
   
-    <a href="https://github.com/QriusGlobal/pyinj/edit/master/docs/contributing.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/QriusGlobal/pyinj/edit/master/docs/llm-raw.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
     </a>
@@ -565,12 +623,119 @@
   
 
 
-<h1 id="contributing">Contributing<a class="headerlink" href="#contributing" title="Permanent link">&para;</a></h1>
-<p>We follow trunk-based development and Conventional Commits. See the full guide in <a href="../CONTRIBUTING.md">CONTRIBUTING.md</a>.</p>
-<p>Key points:
-- Short-lived branches, PRs into <code>main</code>, squash merge.
-- CI must pass (ruff, basedpyright, pytest).
-- Releases automated by Release Please and published to PyPI via GitHub Releases.</p>
+<h1 id="llm-raw-markdown-access">LLM Raw Markdown Access<a class="headerlink" href="#llm-raw-markdown-access" title="Permanent link">&para;</a></h1>
+<p>For LLM tools and agents that need direct access to PyInj documentation as raw markdown without HTML processing, use this direct GitHub raw content link:</p>
+<p><strong>Raw Markdown URL:</strong>
+<div class="highlight"><pre><span></span><code>https://raw.githubusercontent.com/QriusGlobal/pyinj/main/docs/llm.md
+</code></pre></div></p>
+<p>This endpoint provides:
+- Pure markdown content without HTML wrapper
+- No CSS or JavaScript processing<br />
+- Direct HTTP GET access for LLM consumption
+- Content-Type: text/plain
+- Concise PyInj integration guide (&lt;10k tokens)</p>
+<h2 id="alternative-copy-raw-content-below">Alternative: Copy Raw Content Below<a class="headerlink" href="#alternative-copy-raw-content-below" title="Permanent link">&para;</a></h2>
+<hr />
+<h1 id="llm-guide-using-pyinj-for-reliable-di">LLM Guide: Using PyInj for Reliable DI<a class="headerlink" href="#llm-guide-using-pyinj-for-reliable-di" title="Permanent link">&para;</a></h1>
+<p>Purpose: concise guidance for integrating PyInj into LLM-driven projects and tools.</p>
+<ul>
+<li>Audience: engineers wiring DI into agents, tools, plugins.</li>
+<li>Constraints: brief, &lt;10k tokens, actionable.</li>
+</ul>
+<h2 id="core-concepts">Core Concepts<a class="headerlink" href="#core-concepts" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Token[T]: typed identifier for a dependency; holds name, type, scope.</li>
+<li>Scopes: SINGLETON (process), SESSION (user/session), REQUEST (per-call), TRANSIENT.</li>
+<li>Resolution: <code>get/aget</code> by token or type; <code>@inject</code> for functions.</li>
+<li>Registrations are immutable: re-registering a token raises.</li>
+</ul>
+<h2 id="setup-minimal-boilerplate">Setup (Minimal Boilerplate)<a class="headerlink" href="#setup-minimal-boilerplate" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">pyinj</span><span class="w"> </span><span class="kn">import</span> <span class="n">Container</span><span class="p">,</span> <span class="n">Token</span><span class="p">,</span> <span class="n">Scope</span>
+<span class="n">container</span> <span class="o">=</span> <span class="n">Container</span><span class="p">()</span>
+
+<span class="c1"># Tokens</span>
+<span class="n">HTTP</span> <span class="o">=</span> <span class="n">Token</span><span class="p">[</span><span class="n">HttpClient</span><span class="p">](</span><span class="s2">&quot;http&quot;</span><span class="p">,</span> <span class="n">scope</span><span class="o">=</span><span class="n">Scope</span><span class="o">.</span><span class="n">SINGLETON</span><span class="p">)</span>
+<span class="n">TOOLRUN</span> <span class="o">=</span> <span class="n">Token</span><span class="p">[</span><span class="nb">dict</span><span class="p">](</span><span class="s2">&quot;toolrun&quot;</span><span class="p">,</span> <span class="n">scope</span><span class="o">=</span><span class="n">Scope</span><span class="o">.</span><span class="n">REQUEST</span><span class="p">)</span>
+
+<span class="c1"># Providers</span>
+<span class="n">container</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">TOOLRUN</span><span class="p">,</span> <span class="k">lambda</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;invocations&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">})</span>
+
+<span class="c1"># Context-managed async singleton</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">contextlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">asynccontextmanager</span>
+<span class="nd">@asynccontextmanager</span>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">http_cm</span><span class="p">():</span>
+    <span class="n">client</span> <span class="o">=</span> <span class="n">HttpClient</span><span class="p">()</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">yield</span> <span class="n">client</span>
+    <span class="k">finally</span><span class="p">:</span>
+        <span class="k">await</span> <span class="n">client</span><span class="o">.</span><span class="n">aclose</span><span class="p">()</span>
+
+<span class="n">container</span><span class="o">.</span><span class="n">register_context_async</span><span class="p">(</span><span class="n">HTTP</span><span class="p">,</span> <span class="k">lambda</span><span class="p">:</span> <span class="n">http_cm</span><span class="p">())</span>
+</code></pre></div>
+<h2 id="per-call-isolation-agentstools">Per-Call Isolation (Agents/Tools)<a class="headerlink" href="#per-call-isolation-agentstools" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">run_tool</span><span class="p">(</span><span class="n">container</span><span class="p">:</span> <span class="n">Container</span><span class="p">,</span> <span class="n">tool_input</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+    <span class="k">async</span> <span class="k">with</span> <span class="n">container</span><span class="o">.</span><span class="n">async_request_scope</span><span class="p">():</span>
+        <span class="c1"># REQUEST-scoped values</span>
+        <span class="n">state</span> <span class="o">=</span> <span class="n">container</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">TOOLRUN</span><span class="p">)</span>
+        <span class="n">state</span><span class="p">[</span><span class="s2">&quot;invocations&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">http</span> <span class="o">=</span> <span class="k">await</span> <span class="n">container</span><span class="o">.</span><span class="n">aget</span><span class="p">(</span><span class="n">HTTP</span><span class="p">)</span>
+        <span class="k">return</span> <span class="k">await</span> <span class="n">http</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s2">&quot;/run&quot;</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="n">tool_input</span><span class="p">)</span>
+</code></pre></div>
+<h2 id="injection-in-handlers">Injection in Handlers<a class="headerlink" href="#injection-in-handlers" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">pyinj.injection</span><span class="w"> </span><span class="kn">import</span> <span class="n">Inject</span><span class="p">,</span> <span class="n">inject</span>
+
+<span class="nd">@inject</span><span class="p">(</span><span class="n">container</span><span class="o">=</span><span class="n">container</span><span class="p">)</span>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">handler</span><span class="p">(</span><span class="n">payload</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">http</span><span class="p">:</span> <span class="n">Inject</span><span class="p">[</span><span class="n">HttpClient</span><span class="p">]):</span>
+    <span class="k">return</span> <span class="k">await</span> <span class="n">http</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s2">&quot;/endpoint&quot;</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="n">payload</span><span class="p">)</span>
+</code></pre></div>
+<h2 id="overrides-per-call-or-test">Overrides (Per-Call or Test)<a class="headerlink" href="#overrides-per-call-or-test" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span class="n">FAKEHTTP</span> <span class="o">=</span> <span class="n">Token</span><span class="p">(</span><span class="s2">&quot;http&quot;</span><span class="p">,</span> <span class="n">HttpClient</span><span class="p">)</span>
+<span class="k">with</span> <span class="n">container</span><span class="o">.</span><span class="n">use_overrides</span><span class="p">({</span><span class="n">FAKEHTTP</span><span class="p">:</span> <span class="n">FakeHttpClient</span><span class="p">()}):</span>
+    <span class="c1"># only this concurrent context sees the override</span>
+    <span class="o">...</span>
+</code></pre></div>
+<h2 id="accepted-patterns">Accepted Patterns<a class="headerlink" href="#accepted-patterns" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Use <code>register_context_async/sync</code> for resources with lifecycles.</li>
+<li>Use <code>async_request_scope/request_scope</code> to delimit per-call lifetimes.</li>
+<li>Use <code>@inject</code> for handler entry points; avoid sprinkling <code>get()</code> across code.</li>
+<li>Prefer tokens per logical dependency; avoid string-based tokens.</li>
+<li>Use <code>override()</code>/<code>use_overrides()</code> in tests or local contexts.</li>
+</ul>
+<h2 id="anti-patterns-avoid">Anti-Patterns (Avoid)<a class="headerlink" href="#anti-patterns-avoid" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Re-registering tokens at runtime (immutable; raises).</li>
+<li>Storing global singletons in module-level variables—use SINGLETON scope instead.</li>
+<li>Long-lived REQUEST/SESSION scopes—close them promptly.</li>
+<li>Mixing sync-only cleanup for async resources—use async cleanup and <code>aclose()</code>.</li>
+<li>Hidden side-effects in providers—keep providers pure and fast.</li>
+</ul>
+<h2 id="breaking-patterns-incorrect">Breaking Patterns (Incorrect)<a class="headerlink" href="#breaking-patterns-incorrect" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Registering async providers via <code>register</code> and resolving with <code>get()</code> — use <code>aget()</code> or <code>register_context_async</code>.</li>
+<li>Entering async-only resources with sync cleanup (e.g., using <code>with container:</code> for async singletons) — this raises an error; use <code>await container.aclose()</code>.</li>
+<li>Accessing request-scoped values outside of any request/session scope — value won't exist.</li>
+</ul>
+<h2 id="failure-modes-diagnostics">Failure Modes &amp; Diagnostics<a class="headerlink" href="#failure-modes-diagnostics" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Circular dependencies: descriptive error with resolution chain.</li>
+<li>Provider setup failure: exception propagates (fail-fast); inspect the original error.</li>
+<li>Missing registration: <code>ResolutionError</code> with guidance.</li>
+</ul>
+<h2 id="migration-notes">Migration Notes<a class="headerlink" href="#migration-notes" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Registrations are now immutable; remove any re-registration logic.</li>
+<li>Switch resource cleanup to <code>register_context_sync/async</code>.</li>
+</ul>
+<h2 id="checklist-for-llm-integrations">Checklist for LLM Integrations<a class="headerlink" href="#checklist-for-llm-integrations" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[ ] Define tokens per tool/client/config.</li>
+<li>[ ] Register context-managed singletons for IO clients.</li>
+<li>[ ] Wrap each tool/agent invocation in a request scope.</li>
+<li>[ ] Use <code>@inject</code> for handler entry points.</li>
+<li>[ ] Add overrides for tests and per-call variations.</li>
+<li>[ ] Ensure async cleanup is awaited in shutdown paths.</li>
+</ul>
 
 
 
