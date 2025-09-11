@@ -26,7 +26,7 @@ jobs:
 
       - name: Install docs tooling
         run: |
-          uv pip install mkdocs-material mkdocs-minify-plugin mkdocstrings[python] mike
+          uv pip install mkdocs-material mkdocs-minify-plugin mkdocstrings[python] mike mkdocs-llmstxt beautifulsoup4 html2text
 
       - name: Configure git
         run: |
