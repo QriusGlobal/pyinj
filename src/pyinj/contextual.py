@@ -11,7 +11,6 @@ from contextvars import ContextVar
 from contextvars import Token as ContextToken
 from types import TracebackType
 from typing import Any, Awaitable, Callable, TypeVar, cast
-from weakref import WeakValueDictionary
 
 from .exceptions import AsyncCleanupRequiredError
 from .protocols.resources import SupportsAsyncClose, SupportsClose
@@ -85,10 +84,7 @@ class ContextualContainer:
         # Singleton cache (process-wide)
         self._singletons: dict[Token[object], object] = {}
 
-        # Weak cache for transients (auto-cleanup)
-        self._transients: WeakValueDictionary[Token[object], object] = (
-            WeakValueDictionary()
-        )
+        # Transients are never cached - new instance every time
 
         # Providers registry (value type depends on concrete container)
         self._providers: dict[Token[object], Any] = {}
@@ -436,8 +432,7 @@ class ScopeManager:
                 return cast(T, session[cast(Token[object], token)])
         if token.scope == Scope.SINGLETON and token in self._container._singletons:
             return cast(T, self._container._singletons[cast(Token[object], token)])
-        if token.scope == Scope.TRANSIENT and token in self._container._transients:
-            return cast(T, self._container._transients[cast(Token[object], token)])
+        # Transients are never cached - always return None to force new instance
         return None
 
     def store_in_context(self, token: Token[T], instance: T) -> None:
@@ -452,12 +447,8 @@ class ScopeManager:
             if session is not None:
                 session[cast(Token[object], token)] = cast(object, instance)
         elif token.scope == Scope.TRANSIENT:
-            try:
-                self._container._transients[cast(Token[object], token)] = cast(
-                    object, instance
-                )
-            except TypeError:
-                pass
+            # Transients are never stored - each resolution creates a new instance
+            pass
 
     def clear_request_context(self) -> None:
         context = _context_stack.get()
@@ -471,7 +462,7 @@ class ScopeManager:
 
     def clear_all_contexts(self) -> None:
         self._container._singletons.clear()
-        self._container._transients.clear()
+        # Transients are never cached, so nothing to clear
         self.clear_request_context()
         self.clear_session_context()
 

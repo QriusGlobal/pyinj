@@ -36,7 +36,7 @@ class TestContextualContainer:
         container = ContextualContainer()
 
         # Provider view is only available on Container; ContextualContainer tracks providers internally.
-        assert hasattr(container, "_transients")
+        # Transients are no longer cached (fixed memory leak and correctness issue)
         assert hasattr(container, "_async_locks")
 
     def test_request_scope_context(self):
@@ -108,20 +108,20 @@ class TestContextualContainer:
             assert container.resolve_from_context(token) is db
 
     def test_transient_storage(self):
-        """Test transient storage with weak references."""
+        """Test transient storage - transients are never cached."""
         container = ContextualContainer()
         token = Token("temp", Database, scope=Scope.TRANSIENT)
 
         db = Database()
         container.store_in_context(token, db)
 
-        # Should be stored in weak dict
-        assert container.resolve_from_context(token) is db
+        # Transients are never stored/cached - always return None
+        assert container.resolve_from_context(token) is None
 
-        # When reference is gone, should be cleaned up
+        # This ensures each resolution creates a new instance
         _db_id = id(db)
         del db
-        # Weak reference may or may not be cleared immediately
+        # No weak reference to clear since transients aren't cached
         # depending on garbage collection
 
     def test_cleanup_on_scope_exit(self):

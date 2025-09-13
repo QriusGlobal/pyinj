@@ -166,6 +166,7 @@ class TestAsyncCleanup:
         """Test that async resources are tracked for cleanup."""
         container = Container()
         from contextlib import asynccontextmanager
+
         token = Token("async_resource", MockAsyncResource)
 
         @asynccontextmanager
@@ -176,7 +177,9 @@ class TestAsyncCleanup:
             finally:
                 await r.aclose()
 
-        container.register_context(token, lambda: cm(), is_async=True, scope=Scope.SINGLETON)
+        container.register_context(
+            token, lambda: cm(), is_async=True, scope=Scope.SINGLETON
+        )
 
         resource: MockAsyncResource = await container.aget(token)
         assert not resource.closed
@@ -199,8 +202,10 @@ class TestAsyncCleanup:
 
         # Register multiple singleton resources
         from contextlib import asynccontextmanager
+
         for i in range(3):
             token = Token(f"resource_{i}", MockAsyncResource)
+
             @asynccontextmanager
             async def cm():
                 r = create_resource()
@@ -208,7 +213,10 @@ class TestAsyncCleanup:
                     yield r
                 finally:
                     await r.aclose()
-            container.register_context(token, lambda cm=cm: cm(), is_async=True, scope=Scope.SINGLETON)
+
+            container.register_context(
+                token, lambda cm=cm: cm(), is_async=True, scope=Scope.SINGLETON
+            )
             _ = await container.aget(token)
 
         # All should be open
@@ -236,6 +244,7 @@ class TestAsyncCleanup:
 
         container = Container()
         from contextlib import asynccontextmanager
+
         token = Token("problematic", ProblematicResource)
 
         @asynccontextmanager
@@ -246,7 +255,9 @@ class TestAsyncCleanup:
             finally:
                 await r.aclose()
 
-        container.register_context(token, lambda: cm(), is_async=True, scope=Scope.SINGLETON)
+        container.register_context(
+            token, lambda: cm(), is_async=True, scope=Scope.SINGLETON
+        )
         resource: ProblematicResource = await container.aget(token)
 
         # Dispose should not raise even if cleanup fails
@@ -259,6 +270,7 @@ class TestAsyncCleanup:
     async def test_dispose_clears_state(self):
         """Test that dispose clears container state."""
         container = Container()
+
         class Thing:
             pass
 
@@ -319,5 +331,6 @@ class TestAsyncInjection:
         container.register(token_b, provider_b)
 
         from pyinj.exceptions import CircularDependencyError
+
         with pytest.raises(CircularDependencyError):
             await container.aget(token_a)

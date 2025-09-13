@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import threading
-from collections import defaultdict, deque
+from collections import deque
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar
@@ -59,6 +59,10 @@ class _Registration(Generic[T]):
 _resolution_stack: ContextVar[tuple[Token[Any], ...]] = ContextVar(
     "pyinj_resolution_stack", default=()
 )
+# Set for O(1) cycle detection
+_resolution_set: ContextVar[set[Token[Any]]] = ContextVar(
+    "pyinj_resolution_set", default=set()
+)
 
 
 class Container(ContextualContainer):
@@ -105,12 +109,8 @@ class Container(ContextualContainer):
 
         # Thread safety
         self._lock: threading.RLock = threading.RLock()
-        self._singleton_locks: dict[Token[object], threading.Lock] = defaultdict(
-            threading.Lock
-        )
-
-        # Track dependencies for graph
-        self._dependencies: dict[Token[object], set[Token[object]]] = defaultdict(set)
+        # Fixed: No longer using defaultdict to avoid memory leak
+        self._singleton_locks: dict[Token[object], threading.Lock] = {}
 
         # Per-context overrides (DI_SPEC requirement)
         self._overrides: ContextVar[dict[Token[object], object] | None] = ContextVar(
@@ -196,14 +196,25 @@ class Container(ContextualContainer):
 
     @contextmanager
     def _resolution_guard(self, token: Token[Any]):
-        stack = _resolution_stack.get()
-        if token in stack:
+        """Guard against circular dependencies with O(1) cycle detection using sets."""
+        resolution_set = _resolution_set.get()
+        # O(1) lookup for cycle detection
+        if token in resolution_set:
+            # Get stack for error reporting
+            stack = _resolution_stack.get()
             raise CircularDependencyError(token, list(stack))
-        reset_token = _resolution_stack.set(stack + (token,))
+
+        # Update both set (for O(1) lookups) and stack (for error reporting)
+        new_set = resolution_set | {token}
+        new_stack = (*_resolution_stack.get(), token)
+
+        reset_set = _resolution_set.set(new_set)
+        reset_stack = _resolution_stack.set(new_stack)
         try:
             yield
         finally:
-            _resolution_stack.reset(reset_token)
+            _resolution_set.reset(reset_set)
+            _resolution_stack.reset(reset_stack)
 
     # ============= Registration Methods =============
 
@@ -479,6 +490,18 @@ class Container(ContextualContainer):
     def _obj_token(self, token: Token[U]) -> Token[object]:
         return cast(Token[object], token)
 
+    def _get_singleton_lock(self, token: Token[object]) -> threading.Lock:
+        """Get or create a singleton lock for the token, with cleanup after use."""
+        with self._lock:
+            if token not in self._singleton_locks:
+                self._singleton_locks[token] = threading.Lock()
+            return self._singleton_locks[token]
+
+    def _cleanup_singleton_lock(self, token: Token[object]) -> None:
+        """Remove singleton lock after successful initialization to prevent memory leak."""
+        with self._lock:
+            self._singleton_locks.pop(token, None)
+
     def _canonicalize(self, token: Token[U]) -> Token[U]:
         """Return the registered token that matches by name and type (ignore scope).
 
@@ -583,7 +606,8 @@ class Container(ContextualContainer):
             if reg and reg.cleanup is CleanupMode.CONTEXT_SYNC:
                 # handle context-managed sync
                 if effective_scope == Scope.SINGLETON:
-                    with self._singleton_locks[self._obj_token(token)]:
+                    obj_token = self._obj_token(token)
+                    with self._get_singleton_lock(obj_token):
                         cached = self._get_singleton_cached(token)
                         if cached is not None:
                             return cached
@@ -600,7 +624,9 @@ class Container(ContextualContainer):
                             self._resources.append(
                                 cast(SupportsClose | SupportsAsyncClose, value)
                             )
-                        return cast(U, value)
+                    # Clean up lock after successful initialization (outside the with block)
+                    self._cleanup_singleton_lock(obj_token)
+                    return cast(U, value)
                 else:
                     cm = cast(ContextManager[U], reg.provider())
                     value = cm.__enter__()
@@ -623,7 +649,8 @@ class Container(ContextualContainer):
             provider = self._get_provider(token)
             # legacy non-context providers
             if effective_scope == Scope.SINGLETON:
-                with self._singleton_locks[self._obj_token(token)]:
+                obj_token = self._obj_token(token)
+                with self._get_singleton_lock(obj_token):
                     cached = self._get_singleton_cached(token)
                     if cached is not None:
                         return cached
@@ -636,7 +663,9 @@ class Container(ContextualContainer):
                     instance = cast(ProviderSync[U], provider)()
                     self._validate_and_track(token, instance)
                     self._set_singleton_cached(token, instance)
-                    return instance
+                # Clean up lock after successful initialization (outside the with block)
+                self._cleanup_singleton_lock(obj_token)
+                return instance
             else:
                 if asyncio.iscoroutinefunction(cast(Callable[..., Any], provider)):
                     raise ResolutionError(
@@ -842,9 +871,9 @@ class Container(ContextualContainer):
         """Clear caches and statistics; keep provider registrations intact."""
         with self._lock:
             self._singletons.clear()
-            self._transients.clear()
+            # Transients are never cached, so nothing to clear
             self._given_providers.clear()
-            self._dependencies.clear()
+            # Dependencies tracking removed (was dead code)
             self._cache_hits = 0
             self._cache_misses = 0
             self._resolution_times.clear()

@@ -8,12 +8,12 @@ browser downloads while exercising DI patterns and cleanup behavior.
 from __future__ import annotations
 
 import asyncio
+from contextlib import asynccontextmanager
 from typing import Annotated, Any
 
 import httpx
 import pytest
 
-from contextlib import asynccontextmanager
 from pyinj.container import Container
 from pyinj.injection import Inject, inject
 from pyinj.tokens import Scope, Token
@@ -143,6 +143,7 @@ async def test_sync_cleanup_circuit_breaker_raises_for_async_resources() -> None
 
     # Using sync context manager should raise due to async cleanup required
     from pyinj.exceptions import AsyncCleanupRequiredError
+
     with pytest.raises(AsyncCleanupRequiredError):
         with container:
             pass
