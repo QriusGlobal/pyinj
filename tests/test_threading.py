@@ -70,7 +70,9 @@ class TestThreadSafety:
         def register_and_resolve(index: int):
             try:
                 token = Token(f"concurrent_{index}", str)
-                provider = lambda idx=index: f"value_{idx}"
+
+                def provider(idx=index):
+                    return f"value_{idx}"
 
                 container.register(token, provider)
                 result = container.get(token)
@@ -166,6 +168,7 @@ class TestThreadSafety:
 
     def test_resource_tracking_thread_safety(self):
         """Test that resource tracking is thread-safe."""
+
         class CloseableResource:
             def __init__(self, resource_id: str):
                 self.resource_id = resource_id
@@ -192,7 +195,9 @@ class TestThreadSafety:
                 finally:
                     resource.close()
 
-            container.register_context(token, lambda cm=cm: cm(), is_async=False, scope=Scope.SINGLETON)
+            container.register_context(
+                token, lambda cm=cm: cm(), is_async=False, scope=Scope.SINGLETON
+            )
             return container.get(token)
 
         # Create resources concurrently
@@ -278,7 +283,9 @@ class TestThreadSafety:
 
                     # Test overrides (scoped per-thread)
                     override_token: Token[Any] = Token("singleton_0", dict)
-                    with container.use_overrides({override_token: {"overridden": True}}):
+                    with container.use_overrides(
+                        {override_token: {"overridden": True}}
+                    ):
                         overridden = container.get(override_token)
                         assert overridden["overridden"] is True
 

@@ -50,7 +50,9 @@ class TestInjectMarker:
         assert inject_marker.type is None
 
         # With provider
-        provider = lambda: Database()
+        def provider():
+            return Database()
+
         inject_with_provider: Inject[Database] = Inject(provider)
         assert inject_with_provider.provider is provider
 
@@ -92,7 +94,10 @@ class TestDepends:
 
     def test_depends_creates_inject(self):
         """Test Depends creates Inject with provider."""
-        provider = lambda: Database()
+
+        def provider():
+            return Database()
+
         marker = Depends(provider)
 
         assert isinstance(marker, Inject)
@@ -134,7 +139,9 @@ class TestAnalyzeDependencies:
 
     def test_analyze_inject_with_provider(self):
         """Test Inject with provider in default."""
-        provider = lambda: Database()
+
+        def provider():
+            return Database()
 
         def handler(db: Inject[Database] = Inject(provider)) -> object:
             return db

@@ -144,3 +144,187 @@ class TestTypeResolution:
         resolved = container.get(ServiceX)
         assert isinstance(resolved, ServiceX)
         assert resolved.value == 42
+
+
+class TestSingletonLocks:
+    """Test singleton lock creation and cleanup."""
+
+    def test_get_singleton_lock_on_demand(self):
+        """Test that _get_singleton_lock creates locks on demand."""
+        container = Container()
+
+        token = Token("test", object)
+        obj_token = container._obj_token(token)
+
+        # Initially no lock exists
+        assert obj_token not in container._singleton_locks
+
+        # Get lock creates it on demand
+        lock1 = container._get_singleton_lock(obj_token)
+        assert obj_token in container._singleton_locks
+        assert lock1 is not None
+
+        # Getting again returns the same lock
+        lock2 = container._get_singleton_lock(obj_token)
+        assert lock1 is lock2
+
+    def test_cleanup_singleton_lock(self):
+        """Test that _cleanup_singleton_lock removes locks."""
+        container = Container()
+
+        token = Token("test", object)
+        obj_token = container._obj_token(token)
+
+        # Create a lock
+        container._get_singleton_lock(obj_token)
+        assert obj_token in container._singleton_locks
+
+        # Clean it up
+        container._cleanup_singleton_lock(obj_token)
+        assert obj_token not in container._singleton_locks
+
+        # Cleanup is idempotent (doesn't fail if lock doesn't exist)
+        container._cleanup_singleton_lock(obj_token)
+        assert obj_token not in container._singleton_locks
+
+    def test_singleton_lock_cleanup_after_successful_creation(self):
+        """Test that singleton locks are cleaned up after successful singleton creation."""
+        container = Container()
+
+        class TestService:
+            instances_created = 0
+
+            def __init__(self):
+                TestService.instances_created += 1
+                self.id = TestService.instances_created
+
+        token = Token("test", TestService)
+        obj_token = container._obj_token(token)
+        container.register(token, TestService, Scope.SINGLETON)
+
+        # Before first get, no lock exists
+        assert obj_token not in container._singleton_locks
+
+        # Get the singleton
+        instance1 = container.get(token)
+
+        # After creation, lock should be cleaned up or unlocked
+        # Note: The implementation may keep the lock object but it should be unlocked
+        if obj_token in container._singleton_locks:
+            lock = container._singleton_locks[obj_token]
+            assert not lock.locked(), "Lock should be released after singleton creation"
+        assert instance1.id == 1
+
+        # Getting again should not recreate the lock or acquire it
+        instance2 = container.get(token)
+        if obj_token in container._singleton_locks:
+            lock = container._singleton_locks[obj_token]
+            assert not lock.locked(), "Lock should remain unlocked for cached singleton"
+        assert instance1 is instance2
+        assert TestService.instances_created == 1
+
+    def test_singleton_lock_with_concurrent_access(self):
+        """Test that singleton lock properly handles concurrent access."""
+        import threading
+        import time
+
+        container = Container()
+
+        class SlowService:
+            instances = []
+
+            def __init__(self):
+                # Simulate slow initialization
+                time.sleep(0.01)
+                SlowService.instances.append(self)
+
+        token = Token("slow", SlowService)
+        container.register(token, SlowService, Scope.SINGLETON)
+
+        # Try to create singleton from multiple threads
+        threads = []
+        results = []
+
+        def get_singleton():
+            result = container.get(token)
+            results.append(result)
+
+        # Start multiple threads simultaneously
+        for _ in range(10):
+            thread = threading.Thread(target=get_singleton)
+            threads.append(thread)
+            thread.start()
+
+        # Wait for all threads
+        for thread in threads:
+            thread.join()
+
+        # Should have created only one instance
+        assert len(SlowService.instances) == 1
+        assert len(results) == 10
+
+        # All results should be the same instance
+        first_result = results[0]
+        for result in results:
+            assert result is first_result
+
+        # Lock should be cleaned up
+        obj_token = container._obj_token(token)
+        assert obj_token not in container._singleton_locks
+
+    def test_singleton_lock_cleanup_with_failing_initialization(self):
+        """Test lock behavior when singleton initialization fails."""
+        container = Container()
+
+        class FailingService:
+            attempt = 0
+
+            def __init__(self):
+                FailingService.attempt += 1
+                if FailingService.attempt == 1:
+                    raise ValueError("First attempt fails")
+                # Second attempt succeeds
+
+        token = Token("failing", FailingService)
+        obj_token = container._obj_token(token)
+        container.register(token, FailingService, Scope.SINGLETON)
+
+        # First attempt should fail
+        with pytest.raises(ValueError, match="First attempt fails"):
+            container.get(token)
+
+        # Lock state after failure (implementation dependent)
+        # The important thing is that a retry should work
+
+        # Second attempt should succeed
+        instance = container.get(token)
+        assert instance is not None
+        assert FailingService.attempt == 2
+
+        # Lock should be cleaned up after successful creation
+        assert obj_token not in container._singleton_locks
+
+    def test_multiple_singleton_locks_independence(self):
+        """Test that different singletons have independent locks."""
+        container = Container()
+
+        token1 = Token("service1", object)
+        token2 = Token("service2", object)
+        obj_token1 = container._obj_token(token1)
+        obj_token2 = container._obj_token(token2)
+
+        # Get locks for both tokens
+        lock1 = container._get_singleton_lock(obj_token1)
+        lock2 = container._get_singleton_lock(obj_token2)
+
+        # They should be different locks
+        assert lock1 is not lock2
+
+        # Cleanup one shouldn't affect the other
+        container._cleanup_singleton_lock(obj_token1)
+        assert obj_token1 not in container._singleton_locks
+        assert obj_token2 in container._singleton_locks
+
+        # Clean up the second one
+        container._cleanup_singleton_lock(obj_token2)
+        assert obj_token2 not in container._singleton_locks

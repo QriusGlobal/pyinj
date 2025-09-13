@@ -13,12 +13,25 @@
       this.menu = document.getElementById('llm-tools-menu');
       
       if (!this.widget || !this.trigger || !this.menu) {
-        console.warn('LLM Tools widget elements not found');
+        console.error('LLM Tools widget elements not found:', {
+          widget: !!this.widget,
+          trigger: !!this.trigger,
+          menu: !!this.menu
+        });
         return;
       }
       
+      // Mark as initialized
+      this.widget.classList.add('initialized');
+      
       this.isMenuOpen = false;
       this.initializeEventListeners();
+      
+      // Ensure widget is visible
+      this.widget.style.display = 'block';
+      this.widget.style.visibility = 'visible';
+      this.widget.style.opacity = '1';
+      console.log('Widget should be visible now', this.widget);
     }
     
     initializeEventListeners() {
@@ -319,12 +332,25 @@
   document.head.appendChild(style);
   
   // Initialize widget when DOM is ready
+  function initWidget() {
+    console.log('Initializing LLM Tools Widget...');
+    const widget = new LLMToolsWidget();
+    console.log('LLM Tools Widget initialized');
+    return widget;
+  }
+  
+  // Try multiple initialization methods to ensure it works
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-      new LLMToolsWidget();
-    });
+    document.addEventListener('DOMContentLoaded', initWidget);
   } else {
     // DOM is already loaded
-    new LLMToolsWidget();
+    setTimeout(initWidget, 100); // Small delay to ensure MkDocs is ready
   }
+  
+  // Also try on window load as fallback
+  window.addEventListener('load', () => {
+    if (!document.querySelector('.llm-tools-widget.initialized')) {
+      initWidget();
+    }
+  });
 })();

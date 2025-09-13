@@ -8,12 +8,12 @@ tasks.
 from __future__ import annotations
 
 import asyncio
+from contextlib import asynccontextmanager
 from typing import Any
 
 import httpx
 import pytest
 
-from contextlib import asynccontextmanager
 from pyinj.container import Container
 from pyinj.tokens import Scope, Token
 

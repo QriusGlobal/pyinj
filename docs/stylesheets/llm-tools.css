@@ -63,9 +63,11 @@
   }
 }
 
-/* Animation for widget entrance */
+/* Widget should be visible by default */
 .llm-tools-widget {
-  animation: fadeInUp 0.4s ease-out;
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.4s ease-out, transform 0.4s ease-out;
 }
 
 @keyframes fadeInUp {

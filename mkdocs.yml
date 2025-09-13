@@ -88,6 +88,7 @@ hooks:
 
 # Additional JavaScript and CSS for LLM tools
 extra_javascript:
+  - javascripts/llm-contextual.js
   - javascripts/llm-tools.js
 
 extra_css:

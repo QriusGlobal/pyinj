@@ -68,6 +68,45 @@ pyinj/
 
 ## Development Workflow
 
+### Package Management with UV
+This project uses **UV** for fast, reliable Python package management.
+
+#### Environment Setup
+- **Virtual environment**: Located at `.venv/` in the project root
+- **Python runtime**: Managed by UV within the virtual environment
+- **Package installation**: All dependencies managed through UV
+
+#### UV Commands for Development
+```bash
+# Running Python scripts
+uv run python script.py
+
+# Running pytest
+uv run pytest
+uv run pytest tests/test_performance.py -xvs
+
+# Running linting and formatting
+uv run ruff format src tests
+uv run ruff check src tests
+
+# Running type checking
+uv run basedpyright src
+
+# Installing dependencies
+uv pip install -e .  # Install project in editable mode
+uv pip install -r requirements-dev.txt  # Install dev dependencies
+
+# Managing packages
+uv pip list  # List installed packages
+uv pip show pyinj  # Show package details
+```
+
+#### Important Notes
+- **Always use `uv run`**: Ensures commands execute in the correct virtual environment
+- **No global Python**: All Python commands should be prefixed with `uv run`
+- **Fast installation**: UV provides 10-100x faster package installation than pip
+- **Lockfile support**: UV can generate and use lockfiles for reproducible builds
+
 ### Trunk-Based Development
 - **Single long-lived branch**: `main` is always deployable
 - **Feature branches**: Short-lived, merged via squash PRs
@@ -75,11 +114,11 @@ pyinj/
 - **Linear history**: Squash merges maintain clean commit history
 
 ### CI Pipeline (Deterministic Order)
-1. **Format check**: `ruff format --check src` (no auto-fix)
-2. **Lint**: `ruff check src` (comprehensive rule set)
-3. **Type check**: `basedpyright src` (strict mode)
-4. **Tests**: `pytest` with coverage reporting
-5. **Docs build**: `mkdocs build` (parallel job)
+1. **Format check**: `uv run ruff format --check src` (no auto-fix)
+2. **Lint**: `uv run ruff check src` (comprehensive rule set)
+3. **Type check**: `uv run basedpyright src` (strict mode)
+4. **Tests**: `uv run pytest` with coverage reporting
+5. **Docs build**: `uv run mkdocs build` (parallel job)
 
 ### Quality Requirements
 - Type checking: BasedPyright strict mode must pass
