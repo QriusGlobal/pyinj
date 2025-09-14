@@ -1,0 +1,42 @@
+PyInj - Type-Safe Dependency Injection for Python
+==================================================
+
+Copyright (c) 2025 Qrius Global
+https://github.com/QriusGlobal/pyinj
+
+This product includes software developed at Qrius Global.
+
+Version: 1.2.0
+License: Dual Licensed (LGPL-3.0 with exceptions / Commercial Attribution)
+
+ATTRIBUTION NOTICE FOR COMMERCIAL USE
+--------------------------------------
+If you are using PyInj under the Commercial Attribution License,
+you MUST include this NOTICE file in your distribution and add
+the following attribution to your product documentation:
+
+"This product includes PyInj v1.2.0 (https://github.com/QriusGlobal/pyinj)
+ Copyright (c) 2025 Qrius Global, used under Commercial Attribution License"
+
+THIRD-PARTY DEPENDENCIES
+------------------------
+PyInj has zero runtime dependencies.
+
+Development dependencies (not distributed):
+- basedpyright: Type checking
+- pytest: Testing framework  
+- ruff: Linting and formatting
+- mkdocs: Documentation generation
+
+ACKNOWLEDGMENTS
+---------------
+PyInj was inspired by dependency injection patterns from:
+- Spring Framework (Java)
+- Angular (TypeScript)
+- dependency-injector (Python)
+
+Special thanks to the Python typing community for making
+true type-safe dependency injection possible in Python.
+
+For licensing questions: legal@qrius.global
+For technical support: https://github.com/QriusGlobal/pyinj/issues

@@ -2,7 +2,7 @@
 
 [![Python Version](https://img.shields.io/badge/python-3.13+-blue.svg)](https://python.org)
 [![Type Checked](https://img.shields.io/badge/type--checked-basedpyright-blue.svg)](https://github.com/DetachHead/basedpyright)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: LGPL v3](https://img.shields.io/badge/License-LGPL%20v3-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0)
 [![Docs](https://img.shields.io/badge/docs-mkdocs--material-informational)](https://qriusglobal.github.io/pyinj/)
 
 > Status: Stable — Actively maintained. Breaking changes follow semantic versioning.
@@ -14,7 +14,7 @@
 [![Tests & Linting](https://github.com/QriusGlobal/pyinj/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/QriusGlobal/pyinj/actions/workflows/ci.yml)
 [![Docs Build](https://github.com/QriusGlobal/pyinj/actions/workflows/docs.yml/badge.svg?branch=main)](https://github.com/QriusGlobal/pyinj/actions/workflows/docs.yml)
 [![codecov](https://codecov.io/gh/QriusGlobal/pyinj/branch/main/graph/badge.svg)](https://codecov.io/gh/QriusGlobal/pyinj)
-[![License MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: LGPL v3](https://img.shields.io/badge/license-LGPL%20v3-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0)
 [![Typing: strict](https://img.shields.io/badge/typing-strict-blue?logo=python)](#)
 [![Linting: Ruff](https://img.shields.io/badge/linting-ruff-46a2f1?logo=ruff&logoColor=white)](https://docs.astral.sh/ruff/)
 [![Code Style: Ruff](https://img.shields.io/badge/code%20style-ruff-46a2f1?logo=ruff&logoColor=white)](https://docs.astral.sh/ruff/formatter/)
@@ -1259,7 +1259,14 @@ container.register_context_sync(DB_TOKEN, database_connection)
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) file for details.
+PyInj is dual-licensed:
+
+- **LGPL-3.0 with DI-Framework Exception**: For dependency injection tools/frameworks (must be open source)
+- **Commercial Attribution License**: For all other commercial use (requires attribution only)
+
+See [LICENSE](LICENSE) and [LICENSE.md](LICENSE.md) for full details. 
+
+**Quick Summary:** If you're building a DI framework, it must be open source. If you're just using PyInj in your application, you can keep it closed source with attribution (similar to how Android apps acknowledge Linux).
 
 ## Why "PyInj"?
 

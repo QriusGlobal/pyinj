@@ -86,7 +86,7 @@ class Container(ContextualContainer):
     """
 
     def __init__(self) -> None:
-        """Initialize enhanced container."""
+        """Initialize container."""
         super().__init__()
 
         self.tokens: TokenFactory = TokenFactory()
