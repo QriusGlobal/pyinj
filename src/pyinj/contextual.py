@@ -184,14 +184,35 @@ class ContextualContainer:
         Args:
             cache: Cache of resources to clean up
         """
+        # Hold on if yooure using a list as the data structure ?
+        # and then a dict as the data structure for your scopes how do you
+        # ensure that this dict and list is ordered ?
+        # can we use ordered list and ordered dict where applicable
+        # we perofrming cleanup operations like this the we should also ensure
+        # that the data structures which are the containers holding these values are
+        # immutable
+        # How do you know that reversing the resources simply has properly sorted this into LIFO order
+        # many asusmptions being made
+        # is there an option to use stadnard libraries and itertools
+        # vectorize this resoruce cleanup scope and the long try/except block
+        # Use proper pattern matching or a simple method of
+        # identify what cleanup method has to be run by precomputing the steps
+        # be more smart and intelligent
+        # why would there be instances where the resources wouldn't have a aclose or aexit method ?
+        # I don't udnrestand this ?
         resources: list[object] = list(cache.values())
         for resource in reversed(resources):
             try:
+                # extract this check into a simple function which checks
+                # what exit function has to be used
                 aclose = getattr(resource, "aclose", None)
                 aexit = getattr(resource, "__aexit__", None)
                 supports_sync = hasattr(resource, "close") or hasattr(
                     resource, "__exit__"
                 )
+
+                # How can we detect this early and use a if guard statement outside of the try/except block
+                # Then raise the exception straight away
                 if (
                     (aclose and inspect.iscoroutinefunction(aclose))
                     or (aexit and inspect.iscoroutinefunction(aexit))
@@ -200,6 +221,16 @@ class ContextualContainer:
                         type(resource).__name__,
                         "Use an async request/session scope.",
                     )
+
+                # why don't you check this get attr and the top itself ?
+                # if these tokens are implmenting the protocols correctly ?
+                # THen do you have to check and perform these hasattr or get attr
+                # The reason for using static type chekcing and the type annotated protocols
+                # is to effectively deal with these cases ?
+                # We need to ensure that contracts are explicitly fulfilled
+                # Instead of writing code which tries to check whether a contract has been fuliffffled
+                # Using hasattr and getattr
+
                 close = getattr(resource, "close", None)
                 if close is not None and inspect.iscoroutinefunction(close):
                     raise AsyncCleanupRequiredError(

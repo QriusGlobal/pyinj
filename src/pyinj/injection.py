@@ -445,6 +445,11 @@ def inject(
 ) -> Callable[[Callable[P, R]], Callable[P, R]]: ...
 
 
+# Why are we using ANY here for the resolvable?
+# There is only a proper provider Type that can be used right ?
+# The static type annotations should be expclity about this ?
+
+
 def inject(
     func: Callable[P, R] | None = None,
     *,
@@ -490,7 +495,12 @@ def inject(
         deps = InjectionAnalyzer.build_plan(fn) if cache else None
 
         if iscoroutinefunction(fn):
-
+            # Are there are any issues of this being an async wrapper inside a decorator?
+            # is there a better way to do this with macro programming or templating ?
+            # maybe some metaclass programming think harder ?
+            # doesn't have to be complex and add too many overheads
+            # if anything can make the structure cleaner and simpler
+            # while maintaining performance
             @wraps(fn)
             async def async_wrapper(*args: Any, **kwargs: Any) -> R:
                 # Get dependencies if not cached

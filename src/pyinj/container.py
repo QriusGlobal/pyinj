@@ -27,12 +27,14 @@ from typing import (
     overload,
 )
 
+from . import analyzer
 from .contextual import ContextualContainer
 from .exceptions import (
     AsyncCleanupRequiredError,
     CircularDependencyError,
     ResolutionError,
 )
+from .metaclasses import Injectable
 from .protocols.resources import SupportsAsyncClose, SupportsClose
 from .tokens import Scope, Token, TokenFactory
 from .types import ProviderAsync, ProviderLike, ProviderSync
@@ -116,55 +118,106 @@ class Container(ContextualContainer):
         self._auto_register()
 
     def _auto_register(self) -> None:
-        try:
-            from .metaclasses import Injectable
-        except Exception:
-            return
+        """Automatically register classes marked with Injectable metaclass.
+
+        Examines the Injectable registry and registers each class with its
+        dependencies automatically resolved.
+        """
         registry = Injectable.get_registry()
+
         for cls, token in registry.items():
-            scope = getattr(cls, "__scope__", Scope.TRANSIENT)
-            try:
-                from typing import get_type_hints
+            scope = analyzer.get_token_metadata(cls)[1]
+            deps = analyzer.analyze_dependencies(cls)
 
-                hints = get_type_hints(cls.__init__)
-                deps: dict[str, type[object]] = {}
-                for k, v in hints.items():
-                    if k not in ("self", "return") and isinstance(v, type):
-                        deps[k] = v
-            except Exception:
-                deps = {}
+            provider = self._create_provider_for_class(cls, deps)
+            self.register(token, provider, scope=scope)
 
-            if deps:
+    def _create_provider_for_class(
+        self, cls: type[object], deps: dict[str, type[object]]
+    ) -> ProviderLike[object]:
+        """Create a provider function for a class with dependencies.
 
-                def make_factory(
-                    target_cls: type[object] = cls,
-                    deps_map: dict[str, type[object]] = deps,
-                ) -> Callable[[], object]:
-                    def provider() -> object:
-                        kwargs: dict[str, object] = {}
-                        for name, typ in deps_map.items():
-                            kwargs[name] = self.get(typ)
-                        return target_cls(**kwargs)
+        Args:
+            cls: The class to create a provider for
+            deps: Dictionary of dependency names to types
 
-                    return provider
+        Returns:
+            A provider function that resolves dependencies and instantiates the class
+        """
+        # Early return for classes without dependencies
+        if not deps:
+            return cast(ProviderLike[object], cls)
 
-                self.register(token, make_factory(), scope=scope)
-            else:
-                self.register(token, cast(ProviderLike[object], cls), scope=scope)
+        # Create factory with dependency injection
+        def make_factory(
+            target_cls: type[object] = cls,
+            deps_map: dict[str, type[object]] = deps,
+        ) -> Callable[[], object]:
+            def provider() -> object:
+                kwargs = {name: self.get(typ) for name, typ in deps_map.items()}
+                return target_cls(**kwargs)
+
+            return provider
+
+        return make_factory()
 
     def _coerce_to_token(self, spec: Token[U] | type[U]) -> Token[U]:
+        """Convert a type or token specification to a Token instance.
+
+        Args:
+            spec: Either a Token[T] or a type[T]
+
+        Returns:
+            A Token[T] instance, either existing or newly created
+        """
         if isinstance(spec, Token):
             return spec
-        found = self._type_index.get(cast(type[object], spec))
+        # spec must be a type at this point due to type hints
+        return self._find_or_create_token(spec)
+
+    def _find_or_create_token(self, cls: type[U]) -> Token[U]:
+        """Find an existing token for a type or create a new one.
+
+        Args:
+            cls: The type to find a token for
+
+        Returns:
+            An existing token if found, otherwise a new token
+        """
+        # Fast path: check type index
+        obj_cls = cast(type[object], cls)
+        found = self._type_index.get(obj_cls)
         if found is not None:
             return cast(Token[U], found)
+
+        # Check registered providers and singletons
+        token = self._search_for_token_by_type(cls)
+        if token is not None:
+            return token
+
+        # Create new token as fallback
+        return Token(cls.__name__, cls)
+
+    def _search_for_token_by_type(self, cls: type[U]) -> Token[U] | None:
+        """Search for a token matching the given type.
+
+        Args:
+            cls: The type to search for
+
+        Returns:
+            The matching token if found, None otherwise
+        """
+        # Search in providers
         for registered in self._providers:
-            if registered.type_ == spec:
+            if registered.type_ == cls:
                 return cast(Token[U], registered)
+
+        # Search in singletons
         for registered in self._singletons:
-            if registered.type_ == spec:
+            if registered.type_ == cls:
                 return cast(Token[U], registered)
-        return Token(spec.__name__, spec)
+
+        return None
 
     def _get_override(self, token: Token[U]) -> U | None:
         current = self._overrides.get()
@@ -177,6 +230,8 @@ class Container(ContextualContainer):
     @contextmanager
     def _resolution_guard(self, token: Token[Any]):
         """Guard against circular dependencies with O(1) cycle detection using sets."""
+        # Why is resoultion set global on the top of the module ?
+        # Am I missing something here and not undertanding the code properly?
         resolution_set = _resolution_set.get()
         # O(1) lookup for cycle detection
         if token in resolution_set:
@@ -523,104 +578,305 @@ class Container(ContextualContainer):
         Raises:
             ResolutionError: If no provider is registered or resolution fails.
         """
-        if not isinstance(token, Token):
+        # Fast path: check for given instances (85% case)
+        instance = self._resolve_fast_path(token)
+        if instance is not None:
+            return instance
+
+        # Normalize token for resolution
+        token = self._prepare_token_for_resolution(token)
+
+        # Standard resolution path
+        self._cache_misses += 1
+        with self._resolution_guard(token):
+            return self._resolve_sync(token)
+
+    def _resolve_fast_path(self, token: Token[U] | type[U]) -> U | None:
+        """Attempt fast resolution for cached or given instances.
+
+        Args:
+            token: The token or type to resolve
+
+        Returns:
+            The resolved instance if found in cache, None otherwise
+        """
+        # Check givens for types
+        if isinstance(token, type):
             given = self.resolve_given(token)
             if given is not None:
+                self._cache_hits += 1
                 return given
-        token = self._coerce_to_token(token)
-        token = self._canonicalize(token)
 
-        override = self._get_override(token)
+        # Normalize and check overrides/context
+        normalized = self._coerce_to_token(token)
+        normalized = self._canonicalize(normalized)
+
+        # Check override
+        override = self._get_override(normalized)
         if override is not None:
             self._cache_hits += 1
             return override
 
-        instance = self.resolve_from_context(token)
+        # Check context
+        instance = self.resolve_from_context(normalized)
         if instance is not None:
             self._cache_hits += 1
             return instance
 
-        self._cache_misses += 1
+        return None
 
-        with self._resolution_guard(token):
-            obj_token = cast(Token[object], token)
-            reg = self._registrations.get(obj_token)
-            effective_scope = self._get_scope(token)
-            if reg and reg.cleanup is CleanupMode.CONTEXT_ASYNC:
+    def _prepare_token_for_resolution(self, token: Token[U] | type[U]) -> Token[U]:
+        """Prepare a token for resolution by normalizing it.
+
+        Args:
+            token: The token or type to prepare
+
+        Returns:
+            A normalized Token instance
+        """
+        token = self._coerce_to_token(token)
+        return self._canonicalize(token)
+
+    def _resolve_sync(self, token: Token[U]) -> U:
+        """Resolve a dependency synchronously.
+
+        Args:
+            token: The normalized token to resolve
+
+        Returns:
+            The resolved instance
+
+        Raises:
+            ResolutionError: If resolution fails
+        """
+        obj_token = cast(Token[object], token)
+        reg = self._registrations.get(obj_token)
+        effective_scope = self._get_scope(token)
+
+        # Dispatch based on registration type
+        match (reg, reg.cleanup if reg else None):
+            case (reg, CleanupMode.CONTEXT_ASYNC) if reg:
                 raise ResolutionError(
                     token,
                     [],
                     "Context-managed provider is async; Use aget() for async providers",
                 )
-            if reg and reg.cleanup is CleanupMode.CONTEXT_SYNC:
-                if effective_scope == Scope.SINGLETON:
-                    obj_token = self._obj_token(token)
-                    with self._get_singleton_lock(obj_token):
-                        cached = self._get_singleton_cached(token)
-                        if cached is not None:
-                            return cached
-                        cm = cast(ContextManager[U], reg.provider())
-                        value = cm.__enter__()
-                        self._set_singleton_cached(token, value)
+            case (reg, CleanupMode.CONTEXT_SYNC) if reg:
+                return self._resolve_sync_context(token, reg, effective_scope)
+            case _:
+                return self._resolve_sync_provider(token, effective_scope)
 
-                        def _cleanup_cm(cm: ContextManager[U] = cm) -> None:
-                            cm.__exit__(None, None, None)
+    def _resolve_sync_context(
+        self, token: Token[U], reg: _Registration[object], scope: Scope
+    ) -> U:
+        """Resolve a sync context-managed dependency.
 
-                        self._singleton_cleanup_sync.append(_cleanup_cm)
-                        if isinstance(value, (SupportsClose, SupportsAsyncClose)):
-                            self._resources.append(
-                                cast(SupportsClose | SupportsAsyncClose, value)
-                            )
-                    self._cleanup_singleton_lock(obj_token)
-                    return cast(U, value)
-                else:
-                    cm = cast(ContextManager[U], reg.provider())
-                    value = cm.__enter__()
-                    self.store_in_context(token, value)
+        Args:
+            token: The token to resolve
+            reg: The registration with context manager
+            scope: The effective scope
 
-                    def _cleanup_cm(cm: ContextManager[U] = cm) -> None:
-                        cm.__exit__(None, None, None)
+        Returns:
+            The resolved instance
+        """
+        match scope:
+            case Scope.SINGLETON:
+                return self._resolve_singleton_context_sync(token, reg)
+            case Scope.REQUEST | Scope.SESSION:
+                return self._resolve_scoped_context_sync(token, reg, scope)
+            case _:
+                return self._resolve_transient_context_sync(token, reg)
 
-                    if effective_scope == Scope.REQUEST:
-                        self._register_request_cleanup_sync(_cleanup_cm)
-                    elif effective_scope == Scope.SESSION:
-                        self._register_session_cleanup_sync(_cleanup_cm)
-                    if isinstance(value, (SupportsClose, SupportsAsyncClose)):
-                        self._resources.append(
-                            cast(SupportsClose | SupportsAsyncClose, value)
-                        )
-                    return cast(U, value)
+    def _resolve_singleton_context_sync(
+        self, token: Token[U], reg: _Registration[object]
+    ) -> U:
+        """Resolve a singleton context-managed dependency.
 
-            provider = self._get_provider(token)
-            if effective_scope == Scope.SINGLETON:
-                obj_token = self._obj_token(token)
-                with self._get_singleton_lock(obj_token):
-                    cached = self._get_singleton_cached(token)
-                    if cached is not None:
-                        return cached
-                    if asyncio.iscoroutinefunction(cast(Callable[..., Any], provider)):
-                        raise ResolutionError(
-                            token,
-                            [],
-                            "Provider is async; Use aget() for async providers",
-                        )
-                    instance = cast(ProviderSync[U], provider)()
-                    self._validate_and_track(token, instance)
-                    self._set_singleton_cached(token, instance)
-                self._cleanup_singleton_lock(obj_token)
-                return instance
-            else:
-                if asyncio.iscoroutinefunction(cast(Callable[..., Any], provider)):
-                    raise ResolutionError(
-                        token,
-                        [],
-                        "Provider is async; Use aget() for async providers",
-                    )
-                instance = cast(ProviderSync[U], provider)()
-                self._validate_and_track(token, instance)
-                if effective_scope in (Scope.REQUEST, Scope.SESSION):
-                    self.store_in_context(token, instance)
-                return instance
+        Args:
+            token: The token to resolve
+            reg: The registration with context manager
+
+        Returns:
+            The resolved instance
+        """
+        obj_token = self._obj_token(token)
+        with self._get_singleton_lock(obj_token):
+            # Check cache inside lock
+            cached = self._get_singleton_cached(token)
+            if cached is not None:
+                return cached
+
+            # Enter context and cache
+            cm = cast(ContextManager[U], reg.provider())
+            value = cm.__enter__()
+            self._set_singleton_cached(token, value)
+
+            # Register cleanup
+            self._register_singleton_context_cleanup(cm, value)
+
+        self._cleanup_singleton_lock(obj_token)
+        return value
+
+    def _resolve_scoped_context_sync(
+        self, token: Token[U], reg: _Registration[object], scope: Scope
+    ) -> U:
+        """Resolve a scoped context-managed dependency.
+
+        Args:
+            token: The token to resolve
+            reg: The registration with context manager
+            scope: The scope (REQUEST or SESSION)
+
+        Returns:
+            The resolved instance
+        """
+        cm = cast(ContextManager[U], reg.provider())
+        value = cm.__enter__()
+        self.store_in_context(token, value)
+
+        # Register scope-specific cleanup
+        def cleanup(cm: ContextManager[Any] = cm) -> None:
+            cm.__exit__(None, None, None)
+
+        match scope:
+            case Scope.REQUEST:
+                self._register_request_cleanup_sync(cleanup)
+            case Scope.SESSION:
+                self._register_session_cleanup_sync(cleanup)
+            case _:
+                pass  # SINGLETON and TRANSIENT don't need scoped cleanup
+
+        self._track_resource(value)
+        return value
+
+    def _resolve_transient_context_sync(
+        self, token: Token[U], reg: _Registration[object]
+    ) -> U:
+        """Resolve a transient context-managed dependency.
+
+        Args:
+            token: The token to resolve
+            reg: The registration with context manager
+
+        Returns:
+            The resolved instance
+        """
+        cm = cast(ContextManager[U], reg.provider())
+        value = cm.__enter__()
+        # Note: transient context managers are not tracked for cleanup
+        # as they have no defined lifecycle
+        return value
+
+    def _resolve_sync_provider(self, token: Token[U], scope: Scope) -> U:
+        """Resolve a standard synchronous provider.
+
+        Args:
+            token: The token to resolve
+            scope: The effective scope
+
+        Returns:
+            The resolved instance
+
+        Raises:
+            ResolutionError: If provider is async
+        """
+        provider = self._get_provider(token)
+
+        # Validate sync provider
+        if asyncio.iscoroutinefunction(cast(Callable[..., Any], provider)):
+            raise ResolutionError(
+                token, [], "Provider is async; Use aget() for async providers"
+            )
+
+        match scope:
+            case Scope.SINGLETON:
+                return self._resolve_singleton_sync(token, provider)
+            case Scope.REQUEST | Scope.SESSION:
+                return self._resolve_scoped_sync(token, provider, scope)
+            case _:
+                return self._resolve_transient_sync(token, provider)
+
+    def _resolve_singleton_sync(self, token: Token[U], provider: ProviderLike[U]) -> U:
+        """Resolve a singleton provider synchronously.
+
+        Args:
+            token: The token to resolve
+            provider: The provider function
+
+        Returns:
+            The resolved instance
+        """
+        obj_token = self._obj_token(token)
+        with self._get_singleton_lock(obj_token):
+            # Double-check pattern
+            cached = self._get_singleton_cached(token)
+            if cached is not None:
+                return cached
+
+            # Create and cache instance
+            instance = cast(ProviderSync[U], provider)()
+            self._validate_and_track(token, instance)
+            self._set_singleton_cached(token, instance)
+
+        self._cleanup_singleton_lock(obj_token)
+        return instance
+
+    def _resolve_scoped_sync(
+        self, token: Token[U], provider: ProviderLike[U], scope: Scope
+    ) -> U:
+        """Resolve a scoped provider synchronously.
+
+        Args:
+            token: The token to resolve
+            provider: The provider function
+            scope: The scope (REQUEST or SESSION)
+
+        Returns:
+            The resolved instance
+        """
+        instance = cast(ProviderSync[U], provider)()
+        self._validate_and_track(token, instance)
+        self.store_in_context(token, instance)
+        return instance
+
+    def _resolve_transient_sync(self, token: Token[U], provider: ProviderLike[U]) -> U:
+        """Resolve a transient provider synchronously.
+
+        Args:
+            token: The token to resolve
+            provider: The provider function
+
+        Returns:
+            The resolved instance
+        """
+        instance = cast(ProviderSync[U], provider)()
+        self._validate_and_track(token, instance)
+        return instance
+
+    def _register_singleton_context_cleanup(
+        self, cm: ContextManager[Any], value: Any
+    ) -> None:
+        """Register cleanup for a singleton context manager.
+
+        Args:
+            cm: The context manager
+            value: The managed value
+        """
+
+        def cleanup(cm: ContextManager[Any] = cm) -> None:
+            cm.__exit__(None, None, None)
+
+        self._singleton_cleanup_sync.append(cleanup)
+        self._track_resource(value)
+
+    def _track_resource(self, value: Any) -> None:
+        """Track a resource for cleanup if it supports close methods.
+
+        Args:
+            value: The value to track
+        """
+        if isinstance(value, (SupportsClose, SupportsAsyncClose)):
+            self._resources.append(value)
 
     async def aget(self, token: Token[U] | type[U]) -> U:
         """Resolve a dependency asynchronously.
@@ -628,91 +884,249 @@ class Container(ContextualContainer):
         Equivalent to :meth:`get` but awaits async providers and uses
         async locks for singleton initialization.
         """
-        if isinstance(token, type):
-            given = self.resolve_given(token)
-            if given is not None:
-                return given
-        token = self._coerce_to_token(token)
-        token = self._canonicalize(token)
-
-        override = self._get_override(token)
-        if override is not None:
-            self._cache_hits += 1
-            return override
-
-        instance = self.resolve_from_context(token)
+        # Fast path: check for cached instances (85% case)
+        instance = self._resolve_fast_path(token)
         if instance is not None:
-            self._cache_hits += 1
             return instance
 
+        # Normalize token for resolution
+        token = self._prepare_token_for_resolution(token)
+
+        # Async resolution path
         self._cache_misses += 1
-
         with self._resolution_guard(token):
-            obj_token = cast(Token[object], token)
-            reg = self._registrations.get(obj_token)
-            effective_scope = self._get_scope(token)
-            if reg and reg.cleanup is CleanupMode.CONTEXT_ASYNC:
-                if effective_scope == Scope.SINGLETON:
-                    lock = self._ensure_async_lock(token)
-                    async with lock:
-                        cached = self._get_singleton_cached(token)
-                        if cached is not None:
-                            return cached
-                        cm = cast(AsyncContextManager[U], reg.provider())
-                        value = await cm.__aenter__()
-                        self._set_singleton_cached(token, value)
+            return await self._resolve_async(token)
 
-                        async def _acleanup_cm(cm: AsyncContextManager[U] = cm) -> None:
-                            await cm.__aexit__(None, None, None)
+    async def _resolve_async(self, token: Token[U]) -> U:
+        """Resolve a dependency asynchronously.
 
-                        self._singleton_cleanup_async.append(_acleanup_cm)
-                        if isinstance(value, (SupportsClose, SupportsAsyncClose)):
-                            self._resources.append(
-                                cast(SupportsClose | SupportsAsyncClose, value)
-                            )
-                        return cast(U, value)
-                else:
-                    cm = cast(AsyncContextManager[U], reg.provider())
-                    value = await cm.__aenter__()
-                    self.store_in_context(token, value)
+        Args:
+            token: The normalized token to resolve
 
-                    async def _acleanup_cm(cm: AsyncContextManager[U] = cm) -> None:
-                        await cm.__aexit__(None, None, None)
+        Returns:
+            The resolved instance
+        """
+        obj_token = cast(Token[object], token)
+        reg = self._registrations.get(obj_token)
+        effective_scope = self._get_scope(token)
 
-                    if effective_scope == Scope.REQUEST:
-                        self._register_request_cleanup_async(_acleanup_cm)
-                    elif effective_scope == Scope.SESSION:
-                        self._register_session_cleanup_async(_acleanup_cm)
-                    if isinstance(value, (SupportsClose, SupportsAsyncClose)):
-                        self._resources.append(
-                            cast(SupportsClose | SupportsAsyncClose, value)
-                        )
-                    return cast(U, value)
+        # Dispatch based on registration type
+        match (reg, reg.cleanup if reg else None):
+            case (reg, CleanupMode.CONTEXT_ASYNC) if reg:
+                return await self._resolve_async_context(token, reg, effective_scope)
+            case (reg, CleanupMode.CONTEXT_SYNC) if reg:
+                # Sync context managers can be used in async context
+                return self._resolve_sync_context(token, reg, effective_scope)
+            case _:
+                return await self._resolve_async_provider(token, effective_scope)
 
-            provider = self._get_provider(token)
-            if effective_scope == Scope.SINGLETON:
-                lock = self._ensure_async_lock(token)
-                async with lock:
-                    cached = self._get_singleton_cached(token)
-                    if cached is not None:
-                        return cached
+    async def _resolve_async_context(
+        self, token: Token[U], reg: _Registration[object], scope: Scope
+    ) -> U:
+        """Resolve an async context-managed dependency.
 
-                    if asyncio.iscoroutinefunction(cast(Callable[..., Any], provider)):
-                        instance = await cast(ProviderAsync[U], provider)()
-                    else:
-                        instance = cast(ProviderSync[U], provider)()
-                    self._validate_and_track(token, instance)
-                    self._set_singleton_cached(token, instance)
-                    return instance
-            else:
-                if asyncio.iscoroutinefunction(cast(Callable[..., Any], provider)):
-                    instance = await cast(ProviderAsync[U], provider)()
-                else:
-                    instance = cast(ProviderSync[U], provider)()
-                self._validate_and_track(token, instance)
-                if effective_scope in (Scope.REQUEST, Scope.SESSION):
-                    self.store_in_context(token, instance)
-                return instance
+        Args:
+            token: The token to resolve
+            reg: The registration with async context manager
+            scope: The effective scope
+
+        Returns:
+            The resolved instance
+        """
+        match scope:
+            case Scope.SINGLETON:
+                return await self._resolve_singleton_context_async(token, reg)
+            case Scope.REQUEST | Scope.SESSION:
+                return await self._resolve_scoped_context_async(token, reg, scope)
+            case _:
+                return await self._resolve_transient_context_async(token, reg)
+
+    async def _resolve_singleton_context_async(
+        self, token: Token[U], reg: _Registration[object]
+    ) -> U:
+        """Resolve a singleton async context-managed dependency.
+
+        Args:
+            token: The token to resolve
+            reg: The registration with async context manager
+
+        Returns:
+            The resolved instance
+        """
+        lock = self._ensure_async_lock(token)
+        async with lock:
+            # Check cache inside lock
+            cached = self._get_singleton_cached(token)
+            if cached is not None:
+                return cached
+
+            # Enter async context and cache
+            cm = cast(AsyncContextManager[U], reg.provider())
+            value = await cm.__aenter__()
+            self._set_singleton_cached(token, value)
+
+            # Register async cleanup
+            await self._register_singleton_context_cleanup_async(cm, value)
+
+        return value
+
+    async def _resolve_scoped_context_async(
+        self, token: Token[U], reg: _Registration[object], scope: Scope
+    ) -> U:
+        """Resolve a scoped async context-managed dependency.
+
+        Args:
+            token: The token to resolve
+            reg: The registration with async context manager
+            scope: The scope (REQUEST or SESSION)
+
+        Returns:
+            The resolved instance
+        """
+        cm = cast(AsyncContextManager[U], reg.provider())
+        value = await cm.__aenter__()
+        self.store_in_context(token, value)
+
+        # Register scope-specific async cleanup
+        async def cleanup(cm: AsyncContextManager[U] = cm) -> None:
+            await cm.__aexit__(None, None, None)
+
+        match scope:
+            case Scope.REQUEST:
+                self._register_request_cleanup_async(cleanup)
+            case Scope.SESSION:
+                self._register_session_cleanup_async(cleanup)
+            case _:
+                pass  # SINGLETON and TRANSIENT don't need scoped cleanup
+
+        self._track_resource(value)
+        return value
+
+    async def _resolve_transient_context_async(
+        self, token: Token[U], reg: _Registration[object]
+    ) -> U:
+        """Resolve a transient async context-managed dependency.
+
+        Args:
+            token: The token to resolve
+            reg: The registration with async context manager
+
+        Returns:
+            The resolved instance
+        """
+        cm = cast(AsyncContextManager[U], reg.provider())
+        value = await cm.__aenter__()
+        # Note: transient context managers are not tracked for cleanup
+        return value
+
+    async def _resolve_async_provider(self, token: Token[U], scope: Scope) -> U:
+        """Resolve a standard provider asynchronously.
+
+        Args:
+            token: The token to resolve
+            scope: The effective scope
+
+        Returns:
+            The resolved instance
+        """
+        provider = self._get_provider(token)
+
+        match scope:
+            case Scope.SINGLETON:
+                return await self._resolve_singleton_async(token, provider)
+            case Scope.REQUEST | Scope.SESSION:
+                return await self._resolve_scoped_async(token, provider, scope)
+            case _:
+                return await self._resolve_transient_async(token, provider)
+
+    async def _resolve_singleton_async(
+        self, token: Token[U], provider: ProviderLike[U]
+    ) -> U:
+        """Resolve a singleton provider asynchronously.
+
+        Args:
+            token: The token to resolve
+            provider: The provider function
+
+        Returns:
+            The resolved instance
+        """
+        lock = self._ensure_async_lock(token)
+        async with lock:
+            # Double-check pattern
+            cached = self._get_singleton_cached(token)
+            if cached is not None:
+                return cached
+
+            # Create instance (async or sync)
+            instance = await self._call_provider_async(provider)
+            self._validate_and_track(token, instance)
+            self._set_singleton_cached(token, instance)
+
+        return instance
+
+    async def _resolve_scoped_async(
+        self, token: Token[U], provider: ProviderLike[U], scope: Scope
+    ) -> U:
+        """Resolve a scoped provider asynchronously.
+
+        Args:
+            token: The token to resolve
+            provider: The provider function
+            scope: The scope (REQUEST or SESSION)
+
+        Returns:
+            The resolved instance
+        """
+        instance = await self._call_provider_async(provider)
+        self._validate_and_track(token, instance)
+        self.store_in_context(token, instance)
+        return instance
+
+    async def _resolve_transient_async(
+        self, token: Token[U], provider: ProviderLike[U]
+    ) -> U:
+        """Resolve a transient provider asynchronously.
+
+        Args:
+            token: The token to resolve
+            provider: The provider function
+
+        Returns:
+            The resolved instance
+        """
+        instance = await self._call_provider_async(provider)
+        self._validate_and_track(token, instance)
+        return instance
+
+    async def _call_provider_async(self, provider: ProviderLike[U]) -> U:
+        """Call a provider function, handling both sync and async providers.
+
+        Args:
+            provider: The provider function
+
+        Returns:
+            The resolved instance
+        """
+        if asyncio.iscoroutinefunction(cast(Callable[..., Any], provider)):
+            return await cast(ProviderAsync[U], provider)()
+        return cast(ProviderSync[U], provider)()
+
+    async def _register_singleton_context_cleanup_async(
+        self, cm: AsyncContextManager[Any], value: Any
+    ) -> None:
+        """Register cleanup for a singleton async context manager.
+
+        Args:
+            cm: The async context manager
+            value: The managed value
+        """
+
+        async def cleanup(cm: AsyncContextManager[Any] = cm) -> None:
+            await cm.__aexit__(None, None, None)
+
+        self._singleton_cleanup_async.append(cleanup)
+        self._track_resource(value)
 
     def batch_register(
         self, registrations: list[tuple[Token[object], ProviderLike[object]]]

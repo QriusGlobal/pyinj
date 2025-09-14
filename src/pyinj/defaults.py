@@ -11,6 +11,10 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from .protocols.resolvable import Resolvable
 
+# Why is this using resolvable Any ? or None ?
+# What is the proper approriate type to be used ?
+# If this a generic container then use a proper generic TypeVar T
+# Think ?
 _default_container: "Resolvable[Any] | None" = None
 
 
