@@ -14,7 +14,7 @@
       
       
       <link rel="icon" href="/pyinj/next/assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.18">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.19">
     
     
       
@@ -44,6 +44,8 @@
       
     
     
+      <link rel="stylesheet" href="/pyinj/next/stylesheets/llm-tools.css">
+    
     <script>__md_scope=new URL("/pyinj/next",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
@@ -51,6 +53,113 @@
     
     
     
+  
+  <style>
+    /* Inline critical styles for AI Tools widget */
+    .llm-tools-widget {
+      position: fixed !important;
+      bottom: 20px !important;
+      right: 20px !important;
+      z-index: 9999 !important;
+      opacity: 1 !important;
+      visibility: visible !important;
+      display: block !important;
+    }
+    
+    .llm-tools-trigger {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: var(--md-primary-fg-color);
+      color: white;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .llm-tools-trigger:hover {
+      transform: scale(1.05);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+    }
+    
+    .llm-tools-menu {
+      position: absolute;
+      bottom: 70px;
+      right: 0;
+      background: var(--md-default-bg-color);
+      border: 1px solid var(--md-default-fg-color--lightest);
+      border-radius: 8px;
+      padding: 8px 0;
+      min-width: 200px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      display: none;
+      animation: slideUp 0.2s ease-out;
+    }
+    
+    .llm-tools-menu.show {
+      display: block;
+    }
+    
+    .llm-tools-menu button {
+      width: 100%;
+      padding: 10px 16px;
+      text-align: left;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--md-default-fg-color);
+      font-size: 14px;
+      transition: background-color 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .llm-tools-menu button:hover {
+      background-color: var(--md-default-fg-color--lightest);
+    }
+    
+    .llm-tools-menu .divider {
+      height: 1px;
+      background: var(--md-default-fg-color--lightest);
+      margin: 4px 0;
+    }
+    
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    /* Mobile responsive */
+    @media (max-width: 768px) {
+      .llm-tools-widget {
+        bottom: 10px;
+        right: 10px;
+      }
+      
+      .llm-tools-trigger {
+        width: 48px;
+        height: 48px;
+      }
+      
+      .llm-tools-menu {
+        right: -10px;
+        left: auto;
+        min-width: 180px;
+      }
+    }
+  </style>
+
   </head>
   
   
@@ -591,6 +700,10 @@
     
     
       <script src="/pyinj/next/assets/javascripts/bundle.92b07e13.min.js"></script>
+      
+        <script src="/pyinj/next/javascripts/llm-contextual.js"></script>
+      
+        <script src="/pyinj/next/javascripts/llm-tools.js"></script>
       
     
   </body>

@@ -20,7 +20,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.18">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.19">
     
     
       
@@ -50,6 +50,8 @@
       
     
     
+      <link rel="stylesheet" href="../stylesheets/llm-tools.css">
+    
     <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
@@ -57,6 +59,113 @@
     
     
     
+  
+  <style>
+    /* Inline critical styles for AI Tools widget */
+    .llm-tools-widget {
+      position: fixed !important;
+      bottom: 20px !important;
+      right: 20px !important;
+      z-index: 9999 !important;
+      opacity: 1 !important;
+      visibility: visible !important;
+      display: block !important;
+    }
+    
+    .llm-tools-trigger {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: var(--md-primary-fg-color);
+      color: white;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .llm-tools-trigger:hover {
+      transform: scale(1.05);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+    }
+    
+    .llm-tools-menu {
+      position: absolute;
+      bottom: 70px;
+      right: 0;
+      background: var(--md-default-bg-color);
+      border: 1px solid var(--md-default-fg-color--lightest);
+      border-radius: 8px;
+      padding: 8px 0;
+      min-width: 200px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      display: none;
+      animation: slideUp 0.2s ease-out;
+    }
+    
+    .llm-tools-menu.show {
+      display: block;
+    }
+    
+    .llm-tools-menu button {
+      width: 100%;
+      padding: 10px 16px;
+      text-align: left;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--md-default-fg-color);
+      font-size: 14px;
+      transition: background-color 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .llm-tools-menu button:hover {
+      background-color: var(--md-default-fg-color--lightest);
+    }
+    
+    .llm-tools-menu .divider {
+      height: 1px;
+      background: var(--md-default-fg-color--lightest);
+      margin: 4px 0;
+    }
+    
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    /* Mobile responsive */
+    @media (max-width: 768px) {
+      .llm-tools-widget {
+        bottom: 10px;
+        right: 10px;
+      }
+      
+      .llm-tools-trigger {
+        width: 48px;
+        height: 48px;
+      }
+      
+      .llm-tools-menu {
+        right: -10px;
+        left: auto;
+        min-width: 180px;
+      }
+    }
+  </style>
+
   </head>
   
   
@@ -502,6 +611,15 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#performance-features-v120" class="md-nav__link">
+    <span class="md-ellipsis">
+      Performance Features (v1.2.0)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#methods" class="md-nav__link">
     <span class="md-ellipsis">
       Methods
@@ -524,6 +642,15 @@
   
     <nav class="md-nav" aria-label="Token">
       <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#performance-optimizations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Performance Optimizations
+    </span>
+  </a>
+  
+</li>
         
           <li class="md-nav__item">
   <a href="#constructor" class="md-nav__link">
@@ -1112,6 +1239,15 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#performance-features-v120" class="md-nav__link">
+    <span class="md-ellipsis">
+      Performance Features (v1.2.0)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#methods" class="md-nav__link">
     <span class="md-ellipsis">
       Methods
@@ -1134,6 +1270,15 @@
   
     <nav class="md-nav" aria-label="Token">
       <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#performance-optimizations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Performance Optimizations
+    </span>
+  </a>
+  
+</li>
         
           <li class="md-nav__item">
   <a href="#constructor" class="md-nav__link">
@@ -1613,6 +1758,7 @@
             <div class="md-content" data-md-component="content">
               <article class="md-content__inner md-typeset">
                 
+  
                   
 
 
@@ -1631,6 +1777,13 @@
 <h3 id="container">Container<a class="headerlink" href="#container" title="Permanent link">&para;</a></h3>
 <p><strong><code>pyinj.Container</code></strong></p>
 <p>The main dependency injection container that manages services and their lifecycles.</p>
+<h4 id="performance-features-v120">Performance Features (v1.2.0)<a class="headerlink" href="#performance-features-v120" title="Permanent link">&para;</a></h4>
+<ul>
+<li><strong>O(1) circular dependency detection</strong>: Uses set-based tracking instead of O(n²) list concatenation</li>
+<li><strong>Memory-efficient singleton locks</strong>: Proper cleanup after initialization prevents memory leaks</li>
+<li><strong>Transient scope correctness</strong>: Ensures new instances are created on every resolution (no caching)</li>
+<li><strong>Batch operations</strong>: Efficiently register and resolve multiple dependencies</li>
+</ul>
 <h4 id="methods">Methods<a class="headerlink" href="#methods" title="Permanent link">&para;</a></h4>
 <p><strong><code>register(token: Token[T], provider: Callable[[], T], scope: Scope = Scope.TRANSIENT) -&gt; None</code></strong></p>
 <p>Register a provider function for a token.</p>
@@ -1681,9 +1834,52 @@
 <p>Create a session scope context manager.</p>
 <p><strong><code>aclose() -&gt; Awaitable[None]</code></strong></p>
 <p>Asynchronously clean up all managed resources.</p>
+<p><strong><code>batch_register(registrations: list[tuple[Token[object], ProviderLike[object]]]) -&gt; Container</code></strong></p>
+<p>Register multiple dependencies at once for improved performance.</p>
+<ul>
+<li><code>registrations</code>: List of (token, provider) tuples</li>
+<li><strong>Returns</strong>: Self for chaining</li>
+</ul>
+<p><strong><code>batch_resolve(tokens: list[Token[object]]) -&gt; dict[Token[object], object]</code></strong></p>
+<p>Resolve multiple dependencies efficiently in a single operation.</p>
+<ul>
+<li><code>tokens</code>: List of tokens to resolve</li>
+<li><strong>Returns</strong>: Dictionary mapping tokens to resolved instances</li>
+</ul>
+<p><strong><code>batch_resolve_async(tokens: list[Token[object]]) -&gt; Awaitable[dict[Token[object], object]]</code></strong></p>
+<p>Asynchronously resolve multiple dependencies with parallel execution.</p>
+<ul>
+<li><code>tokens</code>: List of tokens to resolve</li>
+<li><strong>Returns</strong>: Awaitable dictionary mapping tokens to resolved instances</li>
+</ul>
+<p><strong><code>use_overrides(mapping: dict[Token[Any], object]) -&gt; ContextManager[None]</code></strong></p>
+<p>Temporarily override tokens within a context block.</p>
+<div class="highlight"><pre><span></span><code><span class="k">with</span> <span class="n">container</span><span class="o">.</span><span class="n">use_overrides</span><span class="p">({</span><span class="n">LOGGER</span><span class="p">:</span> <span class="n">fake_logger</span><span class="p">}):</span>
+    <span class="n">service</span> <span class="o">=</span> <span class="n">container</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">SERVICE</span><span class="p">)</span>
+    <span class="c1"># service uses fake_logger</span>
+</code></pre></div>
+<p><strong><code>get_stats() -&gt; dict[str, Any]</code></strong></p>
+<p>Get container performance statistics.</p>
+<ul>
+<li><strong>Returns</strong>: Dictionary with:</li>
+<li><code>total_providers</code>: Number of registered providers</li>
+<li><code>singletons</code>: Number of cached singletons</li>
+<li><code>cache_hits</code>: Number of cache hits</li>
+<li><code>cache_misses</code>: Number of cache misses</li>
+<li><code>cache_hit_rate</code>: Cache hit ratio (0.0 to 1.0)</li>
+<li><code>avg_resolution_time</code>: Average resolution time in seconds</li>
+</ul>
+<p><strong><code>cache_hit_rate: float</code></strong></p>
+<p>Property returning the cache hit rate (0.0 to 1.0).</p>
 <h3 id="token">Token<a class="headerlink" href="#token" title="Permanent link">&para;</a></h3>
 <p><strong><code>pyinj.Token[T]</code></strong></p>
 <p>A typed identifier for dependencies with pre-computed hash for O(1) lookups.</p>
+<h4 id="performance-optimizations">Performance Optimizations<a class="headerlink" href="#performance-optimizations" title="Permanent link">&para;</a></h4>
+<ul>
+<li><strong>Pre-computed hash</strong>: Hash value calculated once during <code>__post_init__</code></li>
+<li><strong>Immutable design</strong>: Frozen dataclass with <code>__slots__</code> for memory efficiency</li>
+<li><strong>O(1) lookups</strong>: Used as dictionary keys for constant-time container operations</li>
+</ul>
 <h4 id="constructor">Constructor<a class="headerlink" href="#constructor" title="Permanent link">&para;</a></h4>
 <p><strong><code>Token(name: str, type_: type[T], scope: Scope = Scope.TRANSIENT, qualifier: str | None = None, tags: tuple[str, ...] = ())</code></strong></p>
 <ul>
@@ -1921,6 +2117,72 @@
 
 
                 
+  
+  <!-- AI Tools Widget -->
+  <div class="llm-tools-widget" id="llm-tools-widget">
+    <button class="llm-tools-trigger" id="llm-tools-trigger" aria-label="AI Tools" title="AI Tools">
+      <!-- AI/Robot icon SVG -->
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="11" width="18" height="10" rx="2" ry="2"></rect>
+        <circle cx="12" cy="5" r="2"></circle>
+        <path d="M12 7v4"></path>
+        <line x1="8" y1="16" x2="8" y2="16"></line>
+        <line x1="16" y1="16" x2="16" y2="16"></line>
+      </svg>
+    </button>
+    
+    <div class="llm-tools-menu" id="llm-tools-menu">
+      <button data-action="copy-markdown" title="Copy current page as Markdown">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+        </svg>
+        Copy as Markdown
+      </button>
+      
+      <button data-action="copy-text" title="Copy current page as plain text">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+          <line x1="16" y1="13" x2="8" y2="13"></line>
+          <line x1="16" y1="17" x2="8" y2="17"></line>
+          <polyline points="10 9 9 9 8 9"></polyline>
+        </svg>
+        Copy as Text
+      </button>
+      
+      <div class="divider"></div>
+      
+      <button data-action="open-chatgpt" title="Open documentation in ChatGPT">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+        </svg>
+        Open in ChatGPT
+      </button>
+      
+      <button data-action="open-claude" title="Open documentation in Claude">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
+          <line x1="9" y1="9" x2="9.01" y2="9"></line>
+          <line x1="15" y1="9" x2="15.01" y2="9"></line>
+        </svg>
+        Open in Claude
+      </button>
+      
+      <div class="divider"></div>
+      
+      <button data-action="download-full" title="Download complete documentation">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="7 10 12 15 17 10"></polyline>
+          <line x1="12" y1="15" x2="12" y2="3"></line>
+        </svg>
+        Download Full Docs
+      </button>
+    </div>
+  </div>
+
               </article>
             </div>
           
@@ -1980,6 +2242,10 @@
     
     
       <script src="../assets/javascripts/bundle.92b07e13.min.js"></script>
+      
+        <script src="../javascripts/llm-contextual.js"></script>
+      
+        <script src="../javascripts/llm-tools.js"></script>
       
     
   </body>
