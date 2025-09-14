@@ -26,17 +26,14 @@ __all__ = [
 
 T = TypeVar("T")
 
-# Global context variable for DI scopes
 _context_stack: ContextVar[ChainMap[Token[object], object] | None] = ContextVar(
     "pyinj_context_stack", default=None
 )
 
-# Session context for longer-lived dependencies
 _session_context: ContextVar[dict[Token[object], object] | None] = ContextVar(
     "pyinj_session_context", default=None
 )
 
-# Per-scope explicit cleanup stacks (registered via container.register_context)
 _request_cleanup_sync: ContextVar[list[Callable[[], None]] | None] = ContextVar(
     "pyinj_request_cleanup_sync", default=None
 )
@@ -81,24 +78,11 @@ class ContextualContainer:
 
     def __init__(self) -> None:
         """Initialize contextual container."""
-        # Singleton cache (process-wide)
         self._singletons: dict[Token[object], object] = {}
-
-        # Transients are never cached - new instance every time
-
-        # Providers registry (value type depends on concrete container)
         self._providers: dict[Token[object], Any] = {}
-
-        # Async locks for thread-safe singleton creation
         self._async_locks: dict[Token[object], asyncio.Lock] = {}
-
-        # Track resources for cleanup
         self._resources: list[SupportsClose | SupportsAsyncClose] = []
-
-        # Scope manager (RAII contexts, precedence enforcement)
         self._scope_manager = ScopeManager(self)
-
-    # ---- Registration of per-scope cleanup operations (used by Container) ----
 
     def _register_request_cleanup_sync(self, fn: Callable[[], None]) -> None:
         """Register a sync cleanup for the current request scope.
@@ -203,7 +187,6 @@ class ContextualContainer:
         resources: list[object] = list(cache.values())
         for resource in reversed(resources):
             try:
-                # Early fail if async cleanup is required in a sync context
                 aclose = getattr(resource, "aclose", None)
                 aexit = getattr(resource, "__aexit__", None)
                 supports_sync = hasattr(resource, "close") or hasattr(
@@ -223,7 +206,6 @@ class ContextualContainer:
                         type(resource).__name__,
                         "Use an async request/session scope.",
                     )
-                # Prefer context-manager exit over ad-hoc close for sync path
                 if hasattr(resource, "__exit__"):
                     exit_fn = getattr(resource, "__exit__")
                     exit_fn(None, None, None)
@@ -232,7 +214,6 @@ class ContextualContainer:
             except AsyncCleanupRequiredError:
                 raise
             except Exception:
-                # Log but don't fail cleanup
                 pass
 
     async def _async_cleanup_scope(self, cache: dict[Token[object], object]) -> None:
@@ -267,7 +248,6 @@ class ContextualContainer:
                     tasks.append(loop.run_in_executor(None, close))
 
         if tasks:
-            # Gather with return_exceptions to prevent one failure from stopping others
             await asyncio.gather(*tasks, return_exceptions=True)
 
     def resolve_from_context(self, token: Token[T]) -> T | None:
@@ -323,15 +303,12 @@ class ScopeManager:
         else:
             new_context = ChainMap(request_cache, *current.maps)
         token = _context_stack.set(new_context)
-        # Initialize per-request cleanup stacks
         req_sync_token = _request_cleanup_sync.set([])
         req_async_token = _request_cleanup_async.set([])
         try:
             yield
         finally:
-            # Cleanup resources stored via context introspection (legacy path)
             self._container._cleanup_scope(request_cache)
-            # Run explicit per-request cleanup stacks (LIFO)
             try:
                 sync_fns = _request_cleanup_sync.get() or []
                 for fn in reversed(sync_fns):
@@ -353,21 +330,17 @@ class ScopeManager:
         else:
             new_context = ChainMap(request_cache, *current.maps)
         token = _context_stack.set(new_context)
-        # Initialize per-request cleanup stacks
         req_sync_token = _request_cleanup_sync.set([])
         req_async_token = _request_cleanup_async.set([])
         try:
             yield
         finally:
-            # Async cleanup for resources stored via context introspection
             await self._container._async_cleanup_scope(request_cache)
-            # Then run explicit per-request async cleanups (LIFO)
             async_fns = _request_cleanup_async.get() or []
             if async_fns:
                 await asyncio.gather(
                     *[fn() for fn in reversed(async_fns)], return_exceptions=True
                 )
-            # Finally run any sync cleanups
             sync_fns = _request_cleanup_sync.get() or []
             for fn in reversed(sync_fns):
                 try:
@@ -384,7 +357,6 @@ class ScopeManager:
         if existing is None:
             session_cache: dict[Token[object], object] = {}
             session_token = _session_context.set(session_cache)
-            # Only create new cleanup stacks when opening a new session
             sess_sync_token = _session_cleanup_sync.set([])
             sess_async_token = _session_cleanup_async.set([])
         else:
@@ -405,7 +377,6 @@ class ScopeManager:
         finally:
             _context_stack.reset(context_token)
             if session_token:
-                # Run explicit per-session cleanup stacks (LIFO) when session ends
                 try:
                     sync_fns = _session_cleanup_sync.get() or []
                     for fn in reversed(sync_fns):
@@ -447,7 +418,6 @@ class ScopeManager:
             if session is not None:
                 session[cast(Token[object], token)] = cast(object, instance)
         elif token.scope == Scope.TRANSIENT:
-            # Transients are never stored - each resolution creates a new instance
             pass
 
     def clear_request_context(self) -> None:
@@ -462,7 +432,6 @@ class ScopeManager:
 
     def clear_all_contexts(self) -> None:
         self._container._singletons.clear()
-        # Transients are never cached, so nothing to clear
         self.clear_request_context()
         self.clear_session_context()
 

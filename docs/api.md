@@ -10,6 +10,13 @@ This page provides a comprehensive reference for all PyInj classes, functions, a
 
 The main dependency injection container that manages services and their lifecycles.
 
+#### Performance Features (v1.2.0)
+
+- **O(1) circular dependency detection**: Uses set-based tracking instead of O(n²) list concatenation
+- **Memory-efficient singleton locks**: Proper cleanup after initialization prevents memory leaks
+- **Transient scope correctness**: Ensures new instances are created on every resolution (no caching)
+- **Batch operations**: Efficiently register and resolve multiple dependencies
+
 #### Methods
 
 **`register(token: Token[T], provider: Callable[[], T], scope: Scope = Scope.TRANSIENT) -> None`**
@@ -77,11 +84,64 @@ Create a session scope context manager.
 
 Asynchronously clean up all managed resources.
 
+**`batch_register(registrations: list[tuple[Token[object], ProviderLike[object]]]) -> Container`**
+
+Register multiple dependencies at once for improved performance.
+
+- `registrations`: List of (token, provider) tuples
+- **Returns**: Self for chaining
+
+**`batch_resolve(tokens: list[Token[object]]) -> dict[Token[object], object]`**
+
+Resolve multiple dependencies efficiently in a single operation.
+
+- `tokens`: List of tokens to resolve
+- **Returns**: Dictionary mapping tokens to resolved instances
+
+**`batch_resolve_async(tokens: list[Token[object]]) -> Awaitable[dict[Token[object], object]]`**
+
+Asynchronously resolve multiple dependencies with parallel execution.
+
+- `tokens`: List of tokens to resolve
+- **Returns**: Awaitable dictionary mapping tokens to resolved instances
+
+**`use_overrides(mapping: dict[Token[Any], object]) -> ContextManager[None]`**
+
+Temporarily override tokens within a context block.
+
+```python
+with container.use_overrides({LOGGER: fake_logger}):
+    service = container.get(SERVICE)
+    # service uses fake_logger
+```
+
+**`get_stats() -> dict[str, Any]`**
+
+Get container performance statistics.
+
+- **Returns**: Dictionary with:
+  - `total_providers`: Number of registered providers
+  - `singletons`: Number of cached singletons
+  - `cache_hits`: Number of cache hits
+  - `cache_misses`: Number of cache misses
+  - `cache_hit_rate`: Cache hit ratio (0.0 to 1.0)
+  - `avg_resolution_time`: Average resolution time in seconds
+
+**`cache_hit_rate: float`**
+
+Property returning the cache hit rate (0.0 to 1.0).
+
 ### Token
 
 **`pyinj.Token[T]`**
 
 A typed identifier for dependencies with pre-computed hash for O(1) lookups.
+
+#### Performance Optimizations
+
+- **Pre-computed hash**: Hash value calculated once during `__post_init__`
+- **Immutable design**: Frozen dataclass with `__slots__` for memory efficiency
+- **O(1) lookups**: Used as dictionary keys for constant-time container operations
 
 #### Constructor
 

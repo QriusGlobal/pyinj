@@ -52,7 +52,6 @@ class Token(Generic[T]):
     _metadata: dict[str, Any] = field(default_factory=dict, repr=False, compare=False)
 
     def __post_init__(self) -> None:
-        # Pre-compute hash for performance
         hash_tuple = (
             self.name,
             self.type_.__module__ if hasattr(self.type_, "__module__") else "",
@@ -63,14 +62,13 @@ class Token(Generic[T]):
         )
         object.__setattr__(self, "_hash", hash(hash_tuple))
 
-        # Make metadata immutable
         if self._metadata:
             object.__setattr__(self, "_metadata", MappingProxyType(self._metadata))
 
-    def __hash__(self) -> int:  # pragma: no cover - trivial
+    def __hash__(self) -> int:
         return self._hash
 
-    def __eq__(self, other: object) -> bool:  # pragma: no cover - trivial
+    def __eq__(self, other: object) -> bool:
         if not isinstance(other, Token):
             return False
         other_token = cast("Token[object]", other)
@@ -134,7 +132,7 @@ class Token(Generic[T]):
             _metadata=dict(self._metadata) if self._metadata else {},
         )
 
-    def __repr__(self) -> str:  # pragma: no cover - representation
+    def __repr__(self) -> str:
         type_name = getattr(self.type_, "__name__", str(self.type_))
         parts = [f"Token('{self.name}', {type_name}"]
         if self.scope != Scope.TRANSIENT:
@@ -206,7 +204,7 @@ class TokenFactory:
         return self.create(name, type_, scope=scope, qualifier=qualifier)
 
     def clear_cache(self) -> None:
-        """Clear the internal token cache (harmless)."""
+        """Clear the internal token cache."""
         self._cache.clear()
 
     @property

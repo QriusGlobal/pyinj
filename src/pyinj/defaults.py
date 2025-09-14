@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-if TYPE_CHECKING:  # for typing only; avoid import cycles at runtime
+if TYPE_CHECKING:
     from .protocols.resolvable import Resolvable
 
 _default_container: "Resolvable[Any] | None" = None
@@ -22,7 +22,6 @@ class DefaultContainer:
         """Return the default container, creating it on first access."""
         global _default_container
         if _default_container is None:
-            # Local import to avoid top-level cycles
             from .container import Container
 
             _default_container = Container()
