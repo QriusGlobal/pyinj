@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pyinj"
-version = "1.3.0"
+version = "2.0.0"
 description = "DEPRECATED: PyInj has been renamed to 'injx'. Please migrate to the new package."
 readme = { file = "README.md", content-type = "text/markdown" }
 requires-python = ">=3.13"
