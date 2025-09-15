@@ -1,11 +1,63 @@
-# PyInj - Type-Safe Dependency Injection
+# ⚠️ DEPRECATED - This Package Has Been Renamed to `injx`
+
+> **IMPORTANT**: PyInj has been renamed to **Injx** and moved to a new repository. This repository is no longer maintained.
+
+## Migration Instructions
+
+### 1. Update Your Dependencies
+
+Replace `pyinj` with `injx` in your project:
+
+```bash
+# Using UV (recommended)
+uv remove pyinj
+uv add injx
+
+# Using pip
+pip uninstall pyinj
+pip install injx
+```
+
+### 2. Update Your Imports
+
+All imports need to be changed from `pyinj` to `injx`:
+
+```python
+# Old (pyinj)
+from pyinj import Container, Token, inject
+
+# New (injx)
+from injx import Container, Token, inject
+```
+
+### 3. New Repository Location
+
+- **New Repository**: https://github.com/QriusGlobal/injx
+- **Documentation**: https://qriusglobal.github.io/injx/
+- **PyPI Package**: https://pypi.org/project/injx/
+
+## Why the Rename?
+
+The rename from PyInj to Injx reflects:
+- Better alignment with modern Python packaging conventions
+- Clearer brand identity
+- Avoiding potential confusion with other injection-related packages
+
+## Support
+
+For all new issues, feature requests, and discussions, please use the new repository:
+https://github.com/QriusGlobal/injx/issues
+
+---
+
+# PyInj - Type-Safe Dependency Injection (DEPRECATED)
 
 [![Python Version](https://img.shields.io/badge/python-3.13+-blue.svg)](https://python.org)
 [![Type Checked](https://img.shields.io/badge/type--checked-basedpyright-blue.svg)](https://github.com/DetachHead/basedpyright)
 [![License: LGPL v3](https://img.shields.io/badge/License-LGPL%20v3-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0)
 [![Docs](https://img.shields.io/badge/docs-mkdocs--material-informational)](https://qriusglobal.github.io/pyinj/)
 
-> Status: Stable — Actively maintained. Breaking changes follow semantic versioning.
+> Status: DEPRECATED — This package has been renamed to `injx`. Please migrate to the new package.
 
 ## Project Status
 
