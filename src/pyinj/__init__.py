@@ -1,24 +1,37 @@
 """PyInj - Type-safe dependency injection for modern Python.
 
-Status: Beta - APIs may change between pre-releases. Pin exact versions in production.
+⚠️ DEPRECATED: PyInj has been renamed to 'injx'. Please migrate to the new package.
 
-Highlights:
-- Immutable tokens with pre-computed hashes (O(1) lookups)
-- ContextVar-based scoping for async and thread safety
-- `@inject` decorator (FastAPI-inspired) and lightweight markers
-- Scala-style "given" instances for ergonomic overrides
-- Zero runtime dependencies
+Status: DEPRECATED - This package is no longer maintained.
 
-Quick start:
-    from pyinj import Container, Token, Scope
+Migration Instructions:
+1. Uninstall pyinj: pip uninstall pyinj
+2. Install injx: pip install injx
+3. Update imports: Change 'from pyinj' to 'from injx'
 
-    container = Container()
-    DB = Token[Database]("database")
-    container.register(DB, create_database, scope=Scope.SINGLETON)
-
-    db = container.get(DB)
-    # ... use db ...
+For more information, visit: https://github.com/QriusGlobal/injx
 """
+
+import warnings
+
+# Show deprecation warning when the package is imported
+warnings.warn(
+    "\n"
+    "="*70 + "\n"
+    "DEPRECATION WARNING\n" 
+    "="*70 + "\n"
+    "PyInj has been renamed to 'injx' and this package is deprecated.\n"
+    "\n"
+    "Please migrate to the new package:\n"
+    "  1. Uninstall: uv remove pyinj (or pip uninstall pyinj)\n"
+    "  2. Install:   uv add injx (or pip install injx)\n"
+    "  3. Update imports: Change 'from pyinj' to 'from injx'\n"
+    "\n"
+    "For more information, visit: https://github.com/QriusGlobal/injx\n"
+    "="*70,
+    DeprecationWarning,
+    stacklevel=2
+)
 
 from pyinj.container import Container
 from pyinj.contextual import ContextualContainer, RequestScope, SessionScope
@@ -28,7 +41,7 @@ from pyinj.injection import Depends, Given, Inject, inject
 from pyinj.metaclasses import Injectable
 from pyinj.tokens import Scope, Token, TokenFactory
 
-__version__ = "1.2.0"
+__version__ = "1.3.0"
 __author__ = "Qrius Global"
 
 __all__ = [
